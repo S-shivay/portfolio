@@ -1,0 +1,256 @@
+{
+  "capturedAt": "2026-09-21T06:53:08.518Z",
+  "handle": "S-shivay",
+  "profileUrl": "https://github.com/S-shivay",
+  "avatarUrl": "https://avatars.githubusercontent.com/u/96375839?v=4",
+  "joined": "2021-12-19T11:33:53Z",
+  "publicRepos": 29,
+  "authoredRepos": 27,
+  "forkedRepos": 2,
+  "languageRepos": 25,
+  "languages": [
+    {
+      "name": "JavaScript",
+      "count": 12,
+      "share": 0.48
+    },
+    {
+      "name": "TypeScript",
+      "count": 7,
+      "share": 0.28
+    },
+    {
+      "name": "HTML",
+      "count": 4,
+      "share": 0.16
+    },
+    {
+      "name": "CSS",
+      "count": 1,
+      "share": 0.04
+    },
+    {
+      "name": "Java",
+      "count": 1,
+      "share": 0.04
+    }
+  ],
+  "repos": [
+    {
+      "name": "MyAdmin",
+      "url": "https://github.com/S-shivay/MyAdmin",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-12-03T04:07:44Z"
+    },
+    {
+      "name": "Sigma2",
+      "url": "https://github.com/S-shivay/Sigma2",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-11-29T04:09:24Z"
+    },
+    {
+      "name": "sigma",
+      "url": "https://github.com/S-shivay/sigma",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-11-13T14:12:52Z"
+    },
+    {
+      "name": "Sukriti-CSSGrid",
+      "url": "https://github.com/S-shivay/Sukriti-CSSGrid",
+      "language": "CSS",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-10-04T07:49:17Z"
+    },
+    {
+      "name": "Sukriti-Backend",
+      "url": "https://github.com/S-shivay/Sukriti-Backend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-10-04T07:15:15Z"
+    },
+    {
+      "name": "Conversely-MERN-CRUD-Frontend",
+      "url": "https://github.com/S-shivay/Conversely-MERN-CRUD-Frontend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-25T12:56:01Z"
+    },
+    {
+      "name": "Conversely-MERN-CRUD-Backend",
+      "url": "https://github.com/S-shivay/Conversely-MERN-CRUD-Backend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-25T12:53:50Z"
+    },
+    {
+      "name": "AtDrive-Weather-Show",
+      "url": "https://github.com/S-shivay/AtDrive-Weather-Show",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-19T17:34:32Z"
+    },
+    {
+      "name": "AtDrive-SimpleCRUD-Frontend",
+      "url": "https://github.com/S-shivay/AtDrive-SimpleCRUD-Frontend",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-19T17:33:01Z"
+    },
+    {
+      "name": "AtDrive-SimpleCRUD-Backend",
+      "url": "https://github.com/S-shivay/AtDrive-SimpleCRUD-Backend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-19T17:31:12Z"
+    },
+    {
+      "name": "AtDrive-Order-API",
+      "url": "https://github.com/S-shivay/AtDrive-Order-API",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-19T17:29:35Z"
+    },
+    {
+      "name": "Quizzes-Frontend",
+      "url": "https://github.com/S-shivay/Quizzes-Frontend",
+      "language": "JavaScript",
+      "homepage": "https://quizzes-frontend-pi.vercel.app",
+      "stars": 0,
+      "pushedAt": "2024-09-01T18:12:28Z"
+    },
+    {
+      "name": "Quizzes-Backend",
+      "url": "https://github.com/S-shivay/Quizzes-Backend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-09-01T18:05:26Z"
+    },
+    {
+      "name": "JobPortal-Frontend",
+      "url": "https://github.com/S-shivay/JobPortal-Frontend",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-08-28T15:06:44Z"
+    },
+    {
+      "name": "Dashboard-App",
+      "url": "https://github.com/S-shivay/Dashboard-App",
+      "language": "TypeScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-08-22T19:12:43Z"
+    },
+    {
+      "name": "JobPortal",
+      "url": "https://github.com/S-shivay/JobPortal",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-08-15T16:44:52Z"
+    },
+    {
+      "name": "codealphatasks",
+      "url": "https://github.com/S-shivay/codealphatasks",
+      "language": "JavaScript",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-07-15T12:09:01Z"
+    },
+    {
+      "name": "React-Super-App",
+      "url": "https://github.com/S-shivay/React-Super-App",
+      "language": "JavaScript",
+      "homepage": "https://super-app-eta-lake.vercel.app",
+      "stars": 0,
+      "pushedAt": "2024-06-26T05:45:25Z"
+    },
+    {
+      "name": "jyoti",
+      "url": "https://github.com/S-shivay/jyoti",
+      "language": "TypeScript",
+      "homepage": "https://jyoti-khaki.vercel.app",
+      "stars": 0,
+      "pushedAt": "2024-05-22T09:53:26Z"
+    },
+    {
+      "name": "HTML-CSS-JS-Calculator",
+      "url": "https://github.com/S-shivay/HTML-CSS-JS-Calculator",
+      "language": "HTML",
+      "homepage": "https://html-css-js-calculator-gamma.vercel.app",
+      "stars": 0,
+      "pushedAt": "2024-05-16T10:38:25Z"
+    },
+    {
+      "name": "HTML-CSS",
+      "url": "https://github.com/S-shivay/HTML-CSS",
+      "language": "HTML",
+      "homepage": "https://html-css-delta-six.vercel.app",
+      "stars": 0,
+      "pushedAt": "2024-05-01T17:59:44Z"
+    },
+    {
+      "name": "Intellilearn",
+      "url": "https://github.com/S-shivay/Intellilearn",
+      "language": null,
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-02-01T01:57:23Z"
+    },
+    {
+      "name": "OMS",
+      "url": "https://github.com/S-shivay/OMS",
+      "language": null,
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2024-01-30T19:13:59Z"
+    },
+    {
+      "name": "Shokone",
+      "url": "https://github.com/S-shivay/Shokone",
+      "language": "HTML",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2022-08-22T11:17:45Z"
+    },
+    {
+      "name": "SwapDapp",
+      "url": "https://github.com/S-shivay/SwapDapp",
+      "language": "JavaScript",
+      "homepage": "https://swap-dapp-tau.vercel.app",
+      "stars": 0,
+      "pushedAt": "2022-07-25T12:56:21Z"
+    },
+    {
+      "name": "java-program",
+      "url": "https://github.com/S-shivay/java-program",
+      "language": "Java",
+      "homepage": null,
+      "stars": 0,
+      "pushedAt": "2022-05-13T10:48:31Z"
+    },
+    {
+      "name": "Crypto-Project",
+      "url": "https://github.com/S-shivay/Crypto-Project",
+      "language": "HTML",
+      "homepage": "https://crypto-project-rouge.vercel.app",
+      "stars": 0,
+      "pushedAt": "2021-12-19T11:37:45Z"
+    }
+  ]
+}

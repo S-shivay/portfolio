@@ -1,0 +1,3938 @@
+/* `source(none)` turns off Tailwind's automatic content detection, and the
+   `@source` below tells it the one directory that actually contains classes.
+ *
+ * Automatic detection walks the project from the root and skips whatever is in
+ * `.gitignore` — but only when the project is a git repository, and this one is
+ * not. So it was also scanning `.next` and `.next-preview`, which hold minified
+ * chunks, source maps and prerendered HTML. Tailwind extracts class candidates
+ * from those bytes, and one of them came back as `-mx-[var(--gu` plus a literal
+ * U+0007 control character. Tailwind duly generated a rule for it, and the CSS
+ * parser then rejected its own output:
+ *
+ *     Parsing CSS source code failed ... Unexpected token Delim('\u{7}')
+ *
+ * Nothing in `src/` was wrong. The build was feeding on its own output.
+ * Scanning only `src/` also means Tailwind stops re-reading the entire build
+ * directory on every change. */
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@source "..";
+
+/* ==========================================================================
+   THEME VARIANTS
+   Light is the default; `[data-theme="dark"]` opts in. The light values live on
+   bare `:root` rather than relying on `[data-theme="light"]` winning a
+   specificity tie — both selectors score (0,1,0), so that would come down to
+   source order, which is not something a stylesheet should depend on.
+   An inline script in the root layout sets the attribute before first paint.
+   ========================================================================== */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+/* ==========================================================================
+   DESIGN TOKENS — raw values
+   Every value in the project comes from here. Nothing is chosen ad hoc.
+
+   Three colours, used like a printed object rather than a screen:
+     Warm Ivory  #F9EBD7  the paper
+     Emerald     #046A38  the ink — the brand's voice, legible as text (5.7:1)
+     Vermilion   #E34222  the spark — fills, italics, the sun, the cursor
+
+   Vermilion measures 3.5:1 on ivory: fine for display type and fills, short
+   of AA for body-size text. Small vermilion text therefore uses a deeper
+   derived ink (#B32F18, 4.7:1), and text sitting ON a vermilion fill is near
+   black (#170A05, 4.7:1). Every other value below is a tint, shade or mix of
+   the three, so nothing on the page is a colour that wasn't asked for.
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Warm Ivory, and two papers either side of it. */
+  --bg: #f9ebd7;
+  --surface-1: #fcf4e8;
+  --surface-2: #f3e1c8;
+  --surface-3: #ead3b2;
+
+  --line: rgb(11 42 27 / 0.13);
+  --line-strong: rgb(11 42 27 / 0.28);
+  --line-accent: rgb(4 106 56 / 0.4);
+
+  /* Emerald-black ink: 13.1:1 on ivory. Muted 6.9:1, faint 4.9:1 (4.6:1 on
+     the deepest paper). The whole text ramp leans green, so even body copy
+     belongs to the palette. */
+  --text: #0b2a1b;
+  --text-muted: #3e5547;
+  --text-faint: #56665a;
+
+  /* Emerald is the root accent; sections override it. */
+  --accent: #046a38;
+  --accent-ink: #046a38;
+  --accent-fg: #f9ebd7;
+  --accent-soft: rgb(4 106 56 / 0.1);
+  --accent-glow: rgb(4 106 56 / 0.22);
+
+  /* The two named inks, for places that need a specific hue regardless of the
+     section's tone (the italic emphasis, the cursor, the sun). */
+  --emerald-ink: #046a38;
+  --vermilion-ink: #b32f18;
+
+  --ambient-a: rgb(4 106 56 / 0.22);
+  --ambient-b: rgb(227 66 34 / 0.24);
+  --ambient-c: rgb(4 106 56 / 0.14);
+
+  --name-stroke: var(--text);
+
+  /* Stops for `text-iris` — now a two-ink duotone. */
+  --iris-1: #046a38;
+  --iris-2: #b32f18;
+
+  --positive: #046a38;
+  --negative: #b32f18;
+
+  --grid-line: rgb(11 42 27 / 0.055);
+  --grid-line-strong: rgb(11 42 27 / 0.1);
+  --noise-opacity: 0.06;
+  --scanline-opacity: 0;
+
+  /* Shadows are emerald-black, never grey, so they read as cast on paper. */
+  --elevation-1: 0 1px 2px 0 rgb(11 42 27 / 0.07);
+  --elevation-2: 0 1px 2px 0 rgb(11 42 27 / 0.05),
+    0 18px 40px -22px rgb(11 42 27 / 0.32);
+
+  --paper-shadow: 0 0 0 1px rgb(11 42 27 / 0.07), 0 1px 2px rgb(11 42 27 / 0.08),
+    0 12px 28px -14px rgb(11 42 27 / 0.34);
+  --paper-shadow-lift: 0 0 0 1px rgb(11 42 27 / 0.08),
+    0 2px 4px rgb(11 42 27 / 0.06), 0 24px 44px -18px rgb(11 42 27 / 0.44);
+}
+
+/* Dark: Emerald Night. The same three colours with the paper and ink swapped
+   — ivory type on a green so deep it reads as black until it sits beside
+   something truly neutral. */
+[data-theme="dark"],
+[data-surface="ink"] {
+  color-scheme: dark;
+
+  --bg: #061a10;
+  --surface-1: #0a2318;
+  --surface-2: #0f2d1f;
+  --surface-3: #163a29;
+
+  --line: rgb(249 235 215 / 0.13);
+  --line-strong: rgb(249 235 215 / 0.28);
+  --line-accent: rgb(47 165 106 / 0.45);
+
+  /* 15.4:1, 8.9:1 and 5.9:1. */
+  --text: #f9ebd7;
+  --text-muted: #cbbda6;
+  --text-faint: #a3998a;
+
+  /* Emerald brightens to jade on the dark ground, where #046A38 would sink
+     into it; type on it flips to the dark ground colour (5.8:1). */
+  --accent: #2fa56a;
+  --accent-ink: #7fd6a4;
+  --accent-fg: #061a10;
+  --accent-soft: rgb(47 165 106 / 0.14);
+  --accent-glow: rgb(47 165 106 / 0.3);
+
+  --emerald-ink: #7fd6a4;
+  --vermilion-ink: #ff8a6b;
+
+  --ambient-a: rgb(47 165 106 / 0.26);
+  --ambient-b: rgb(227 66 34 / 0.26);
+  --ambient-c: rgb(47 165 106 / 0.16);
+
+  --iris-1: #7fd6a4;
+  --iris-2: #ff8a6b;
+
+  --positive: #7fd6a4;
+  --negative: #ff8a6b;
+
+  --grid-line: rgb(249 235 215 / 0.05);
+  --grid-line-strong: rgb(249 235 215 / 0.09);
+  --noise-opacity: 0.07;
+  --scanline-opacity: 0;
+
+  --elevation-1: inset 0 1px 0 0 rgb(249 235 215 / 0.06);
+  --elevation-2: inset 0 1px 0 0 rgb(249 235 215 / 0.08),
+    0 18px 44px -26px rgb(0 0 0 / 0.9);
+
+  --paper-shadow: 0 0 0 1px rgb(255 255 255 / 0.1), 0 16px 36px -16px rgb(0 0 0 / 0.9);
+  --paper-shadow-lift: 0 0 0 1px rgb(255 255 255 / 0.14),
+    0 28px 52px -18px rgb(0 0 0 / 0.95);
+}
+
+/* An ink panel: a full-bleed sheet of deep emerald dropped into the ivory
+   page. It reuses every dark value above and only lifts the ground a step,
+   so in the dark theme the panel still separates from the page around it. */
+[data-surface="ink"] {
+  --bg: #0b2a1b;
+  --surface-1: #0f3322;
+  --surface-2: #143c29;
+  --surface-3: #1b4632;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* ==========================================================================
+   SECTION TONES
+   Two hues now, not six. `@theme inline` is what makes this work: every accent
+   utility in the project compiles to `var(--accent-*)` rather than a baked
+   value, so redefining these variables on a section element re-colours every
+   card, chip, icon, border and button inside it with no component edits.
+
+   The page alternates emerald and vermilion section by section. The old six
+   hue names are kept as aliases (three per family) so the repeating
+   components that cycle by name — project cards, ticker dots, playground
+   cards — keep working and simply alternate between the two.
+   ========================================================================== */
+
+[data-tone] {
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+  --accent-glow: color-mix(in oklab, var(--accent) 30%, transparent);
+  --line-accent: color-mix(in oklab, var(--accent) 42%, transparent);
+}
+
+/* Emerald */
+[data-tone="home"],
+[data-tone="about"],
+[data-tone="work"],
+[data-tone="github"],
+[data-tone="engineering"],
+[data-tone="certifications"],
+[data-tone="emerald"],
+[data-tone="blue"],
+[data-tone="cyan"],
+[data-tone="lime"] {
+  --accent: #046a38;
+  --accent-ink: #046a38;
+  --accent-fg: #f9ebd7;
+  --wash-c: var(--brand-vermilion);
+}
+
+/* Vermilion */
+[data-tone="stack"],
+[data-tone="experience"],
+[data-tone="skills"],
+[data-tone="playground"],
+[data-tone="signals"],
+[data-tone="contact"],
+[data-tone="vermilion"],
+[data-tone="pink"],
+[data-tone="orange"],
+[data-tone="violet"] {
+  --accent: #e34222;
+  --accent-ink: #b32f18;
+  --accent-fg: #170a05;
+  --wash-c: var(--brand-emerald);
+}
+
+/* The same two hues on a dark ground — the dark theme, or an ink panel in
+   either theme. Emerald brightens to jade; vermilion keeps its fill and gets a
+   bright ink (6.4-7.2:1). */
+:is([data-theme="dark"], [data-surface="ink"])
+  :is(
+    [data-tone="home"],
+    [data-tone="about"],
+    [data-tone="work"],
+    [data-tone="github"],
+    [data-tone="engineering"],
+    [data-tone="certifications"],
+    [data-tone="emerald"],
+    [data-tone="blue"],
+    [data-tone="cyan"],
+    [data-tone="lime"]
+  ),
+[data-surface="ink"]:is(
+    [data-tone="home"],
+    [data-tone="about"],
+    [data-tone="work"],
+    [data-tone="github"],
+    [data-tone="engineering"],
+    [data-tone="certifications"],
+    [data-tone="emerald"],
+    [data-tone="blue"],
+    [data-tone="cyan"],
+    [data-tone="lime"]
+  ) {
+  --accent: #2fa56a;
+  --accent-ink: #7fd6a4;
+  --accent-fg: #061a10;
+}
+
+:is([data-theme="dark"], [data-surface="ink"])
+  :is(
+    [data-tone="stack"],
+    [data-tone="experience"],
+    [data-tone="skills"],
+    [data-tone="playground"],
+    [data-tone="signals"],
+    [data-tone="contact"],
+    [data-tone="vermilion"],
+    [data-tone="pink"],
+    [data-tone="orange"],
+    [data-tone="violet"]
+  ),
+[data-surface="ink"]:is(
+    [data-tone="stack"],
+    [data-tone="experience"],
+    [data-tone="skills"],
+    [data-tone="playground"],
+    [data-tone="signals"],
+    [data-tone="contact"],
+    [data-tone="vermilion"],
+    [data-tone="pink"],
+    [data-tone="orange"],
+    [data-tone="violet"]
+  ) {
+  --accent-ink: #ff8a6b;
+}
+
+/* Theme-independent structural tokens */
+:root {
+  --grid-size: 64px;
+  --dot-size: 22px;
+
+  /* The brand set by name, for effects that need a specific hue regardless of
+     the section (the sun, the ribbons, the intro curtain). */
+  --brand-ivory: #f9ebd7;
+  --brand-emerald: #046a38;
+  --brand-vermilion: #e34222;
+  --brand-ink: #0b2a1b;
+  --brand-jade: #2fa56a;
+  --brand-coral: #f07152;
+
+  /* The six old neon names, mapped onto the new palette so nothing that still
+     asks for them falls back to a colour outside it. */
+  --brand-blue: var(--brand-emerald);
+  --brand-violet: var(--brand-vermilion);
+  --brand-pink: var(--brand-vermilion);
+  --brand-lime: var(--brand-jade);
+  --brand-cyan: var(--brand-jade);
+  --brand-orange: var(--brand-coral);
+
+  /* Layout */
+  --container: 1240px;
+  --container-wide: 1440px;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --section-y: clamp(5.5rem, 11vw, 10rem);
+
+  /* Motion — one easing family for the whole site. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-expo: cubic-bezier(0.87, 0, 0.13, 1);
+  --dur-instant: 120ms;
+  --dur-micro: 200ms;
+  --dur-reveal: 320ms;
+  --dur-slow: 500ms;
+
+  /* Z-index scale — no arbitrary values anywhere in the project. */
+  --z-grid: 0;
+  --z-raised: 10;
+  --z-nav: 20;
+  --z-menu: 30;
+  --z-cursor: 40;
+  --z-overlay: 50;
+}
+
+/* ==========================================================================
+   SHADCN TOKEN BRIDGE
+   Components added through the shadcn CLI (Skiper UI, Vengeance UI, shadcn
+   itself) are written against shadcn's token names: `bg-background`,
+   `text-muted-foreground`, `border-border`, `bg-primary`. `shadcn init`
+   writes a grey palette for those names, and in doing so redefines
+   `--accent` — the variable every section tone on this site is built on.
+
+   So the names are kept and pointed at this site's own tokens instead. A
+   registry component then lands already themed: it follows the light/dark
+   switch (`data-theme`, not shadcn's `.dark` class) and picks up the section
+   hue it is placed in, with no edits. `--accent` itself is deliberately NOT
+   redefined here.
+
+   If a future `shadcn add` writes raw oklch() values back into this file,
+   delete them: this block is the source of truth.
+   ========================================================================== */
+
+:root {
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface-1);
+  --card-foreground: var(--text);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--text);
+  --primary: var(--text);
+  --primary-foreground: var(--bg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--accent-fg);
+  --destructive: var(--negative);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--accent-ink);
+  --chart-1: var(--brand-blue);
+  --chart-2: var(--brand-violet);
+  --chart-3: var(--brand-pink);
+  --chart-4: var(--brand-cyan);
+  --chart-5: var(--brand-orange);
+  --radius: 0.625rem;
+  --sidebar: var(--surface-1);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--accent-fg);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--accent-ink);
+}
+
+/* ==========================================================================
+   TAILWIND THEME MAPPING
+   `inline` so the utilities resolve to var() and follow both the theme switch
+   and the per-section tone.
+   ========================================================================== */
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-accent: var(--line-accent);
+
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-violet: var(--brand-violet);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-orange: var(--brand-orange);
+
+  --color-ivory: var(--brand-ivory);
+  --color-emerald: var(--brand-emerald);
+  --color-vermilion: var(--brand-vermilion);
+  --color-ink: var(--brand-ink);
+  --color-jade: var(--brand-jade);
+  --color-emerald-ink: var(--emerald-ink);
+  --color-vermilion-ink: var(--vermilion-ink);
+
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+
+  /* Three families, each with a job. Fraunces is the voice — a soft,
+     high-contrast "Old Style" serif with an optical-size axis, so the same
+     family is delicate at 9rem and sturdy at 1.25rem, and an italic that
+     carries the emphasis colour. Geist carries body copy, where character is
+     a liability. JetBrains Mono is the technical texture: labels,
+     coordinates, section numbers, metadata. */
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  /* Never `var(--font-sans)`: that is what `shadcn init` writes here, and a
+     variable defined as itself is invalid, which drops body copy to the
+     browser's default serif. Geist arrives as `--font-geist-sans`. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  /* Fluid type scale. The display step is deliberately enormous — at the top
+     of its clamp it is 11rem, which fills most of a laptop viewport. */
+  /* Sized against the longest authored headline line, not picked for effect.
+     "that feel as good" is 17 characters; Space Grotesk Bold averages ~0.52em
+     per character, so the line occupies ~8.8x the font size. The 8rem cap keeps
+     that inside the 1344px of usable width a 1440px container leaves after
+     gutters, and the 2.25rem floor keeps it inside 335px on a 375px phone. */
+  /* A serif sets narrower than the old grotesk (~0.46em a character at this
+     weight against ~0.52em), so the mega step can run larger in the same
+     width. */
+  --text-mega: clamp(2.6rem, 0.4rem + 9.6vw, 9.25rem);
+  --text-mega--line-height: 0.92;
+  --text-mega--letter-spacing: -0.035em;
+  --text-mega--font-weight: 400;
+
+  --text-display: clamp(2.9rem, 1.2rem + 6.8vw, 7rem);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 400;
+
+  --text-h1: clamp(2.4rem, 1.3rem + 4.6vw, 5rem);
+  --text-h1--line-height: 1;
+  --text-h1--letter-spacing: -0.03em;
+
+  --text-h2: clamp(2.25rem, 1.2rem + 4vw, 4.75rem);
+  --text-h2--line-height: 1;
+  --text-h2--letter-spacing: -0.028em;
+
+  --text-h3: clamp(1.25rem, 1.05rem + 0.8vw, 1.625rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.015em;
+
+  --text-lead: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  --text-lead--line-height: 1.6;
+
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1;
+  --text-label--letter-spacing: 0.14em;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+
+  --ease-out-soft: var(--ease-out);
+  --ease-in-out-soft: var(--ease-in-out);
+  --ease-spring-soft: var(--ease-spring);
+
+  --container-content: var(--container);
+  --container-wide: var(--container-wide);
+  /* shadcn's name for the heading face; this site's is Space Grotesk. */
+  --font-heading: var(--font-display);
+
+  --animate-spin-slow: spin-slow 18s linear infinite;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Keeps anchored sections clear of the sticky nav. */
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans), sans-serif;
+    font-size: 1rem;
+    line-height: 1.65;
+    /* Guards against any child overflowing on narrow screens. */
+    overflow-x: clip;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Headings take the display face automatically, so no component has to
+     remember to ask for it. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), serif;
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  /* The house emphasis: an `<em>` in display type turns italic and vermilion.
+     The one move the whole design repeats — the hero, every section heading,
+     the footer — so a reader learns it once and then sees the palette's spark
+     wherever the sentence leans. */
+  :is(h1, h2, h3, .font-display) em {
+    font-style: italic;
+    color: var(--vermilion-ink);
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* One focus treatment across the entire site. Two rings: the accent may be
+     Acid Lime on white, which alone is invisible, so a dark inner ring
+     guarantees the indicator is visible on any tone. */
+  :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 3px;
+    border-radius: var(--radius-xs);
+  }
+
+  ::selection {
+    background-color: var(--brand-vermilion);
+    color: #170a05;
+  }
+
+  ::placeholder {
+    color: var(--text-faint);
+  }
+}
+
+/* ==========================================================================
+   KEYFRAMES
+   Every one of these animates transform, opacity or a filter — never a
+   geometry property — so they stay on the compositor and cost no layout.
+   ========================================================================== */
+
+/* Two identical tracks sit side by side; translating one full track width
+   makes the loop seamless. */
+@keyframes ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+/* The blobs behind each section, drifting on long unequal cycles so the group
+   never visibly repeats. */
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8%, -6%, 0) scale(1.18);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.12);
+  }
+  50% {
+    transform: translate3d(-9%, 7%, 0) scale(1);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate3d(-4%, 3%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(6%, -4%, 0) scale(0.92);
+  }
+}
+
+/* Floating decorative objects — the rings, stickers and geometry in the hero. */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0.15;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   Motion components read this too, but the CSS floor guarantees that even a
+   component that forgets to check is neutralised. Colour survives; only
+   movement is removed, which is the correct split — the palette is what makes
+   the page vivid and the drift is what makes some people ill.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   SCROLL REVEAL
+   ==========================================================================
+ *
+ * The entrance animation for nearly every block on the page, done in CSS and
+ * driven by one shared IntersectionObserver (see components/motion/Reveal.jsx).
+ *
+ * It used to be a framer-motion component per element — 112 of them on the home
+ * page, seven in a single project row, each one a client component with its own
+ * observer and its own animation loop.
+ *
+ * What replaces it costs nothing per element: two properties the compositor
+ * already animates for free, one attribute toggle, and one observer for the
+ * whole document. The measured win is in hydration rather than in frame rate:
+ * cold-cache long tasks on a throttled mobile profile went from 7 (429ms total)
+ * to 3 (~180ms), reproduced across four runs. Claims about frame rate are
+ * deliberately absent — the headless browser available here rasterizes in
+ * software, so any paint or compositing A/B it reports is an artifact of that,
+ * not a fact about a phone.
+ *
+ * It also fixed a correctness bug that no amount of profiling would have found:
+ * framer-motion's viewport `amount: 0.25` can never become true for an element
+ * taller than the viewport, so on a phone tall blocks could stay invisible
+ * forever. The observer below uses `threshold: 0` with a `rootMargin`.
+ */
+
+/* Gated on `data-reveals="armed"`, which RevealRuntime sets from its own effect
+   — NOT on `data-motion`, which the inline head script sets before first paint.
+   The difference is the whole reliability story of this section.
+ *
+ * `[data-reveal]` elements are hidden by CSS and un-hidden by an
+ * IntersectionObserver. If the hidden state is applied before that observer
+ * exists, then every moment between first paint and hydration is a page whose
+ * body copy, cards, list rows and headings are all `opacity: 0`. On a fast
+ * connection that is imperceptible. Over wi-fi to a phone, against a dev
+ * server shipping an unminified bundle, it is eight seconds of a site that
+ * renders its layout and none of its content — which is exactly what it looks
+ * like when someone reports that "nothing is showing". A bundle that fails to
+ * load at all left the page permanently blank.
+ *
+ * Armed from the runtime instead, the server-rendered HTML is simply visible
+ * until the observer is genuinely in place. RevealRuntime marks everything
+ * already on screen as shown *before* arming, so nothing that a reader can see
+ * is ever taken away from them. Only content below the fold is hidden, and by
+ * then there is an observer to reveal it. */
+html[data-reveals="armed"] [data-reveal] {
+  opacity: 0;
+  /* A 2D translate on purpose. `translate3d` (or a `will-change`) would give
+     every not-yet-revealed element its own compositor layer, and the page
+     holds hundreds of them at once — that is GPU memory and per-frame
+     compositing spent on things nobody can see yet. The browser promotes the
+     element for the duration of the transition and drops it again after. */
+  transform: translate(var(--reveal-x, 0), var(--reveal-y, 12px));
+  transition:
+    opacity var(--reveal-dur, var(--dur-reveal)) var(--ease-out)
+      var(--reveal-delay, 0ms),
+    transform var(--reveal-dur, var(--dur-reveal)) var(--ease-out)
+      var(--reveal-delay, 0ms);
+}
+
+html[data-reveals="armed"] [data-reveal][data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Reduced motion: no hidden state at all, so nothing depends on the observer
+   ever firing. The global floor above would shorten the transition anyway;
+   this removes the travel as well. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-reveals="armed"] [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* On-mount entrances — the hero's headline lines and supporting copy. These
+   never waited for a scroll position, so they need no observer: a plain
+   keyframe, which the compositor runs off the main thread entirely. */
+/* `--intro-delay` is set while the intro curtain plays (first page of a
+   session only), so the hero's entrance starts as the curtain lifts instead of
+   finishing unseen behind it. */
+html[data-motion="on"] [data-enter] {
+  animation: enter-rise var(--enter-dur, 500ms) var(--ease-out)
+    calc(var(--enter-delay, 0ms) + var(--intro-delay, 0ms)) both;
+}
+
+html[data-motion="on"] [data-enter="line"] {
+  animation-name: enter-line;
+}
+
+/* A display line arriving out of focus: rises, sharpens and straightens. */
+html[data-motion="on"] [data-enter="blur"] {
+  animation-name: enter-blur;
+}
+
+@keyframes enter-blur {
+  from {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translate3d(0, 0.45em, 0) rotate(2deg);
+  }
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--enter-y, 10px), 0);
+  }
+}
+
+/* The masked headline line: rises from under its own clipping wrapper, so the
+   text stays one intact node and the accessible name is unchanged. */
+@keyframes enter-line {
+  from {
+    transform: translate3d(0, 110%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="on"] [data-enter] {
+    animation: none;
+  }
+}
+
+/* Nothing animates inside a section nobody can see.
+ *
+ * `data-ambient` marks a subtree that carries continuous decorative animation —
+ * the section washes, the tech ticker, the hero's orbiting shapes. RevealRuntime
+ * adds `data-offscreen` when the subtree leaves the viewport and removes it when
+ * it comes back.
+ *
+ * Unpaused, this page keeps roughly twenty-five large drifting gradients and a
+ * 46-second marquee running for its entire lifetime, whether or not any of them
+ * are on screen. Each one is a compositor layer being recomposited every frame,
+ * which on a phone is continuous GPU work and battery drain bought for something
+ * literally out of view. Scrolled into view they behave exactly as before, and
+ * because pausing preserves the animation's phase, a wash resumes from where it
+ * was rather than restarting.
+ *
+ * Deliberately broad: it pauses every animation in the subtree, not a curated
+ * list. A decorative animation nobody can see is never worth a frame, and an
+ * opt-out list would silently miss whatever gets added next. Transitions are
+ * untouched, so the scroll reveals above are unaffected. */
+[data-ambient][data-offscreen],
+[data-ambient][data-offscreen]::before,
+[data-ambient][data-offscreen]::after,
+[data-ambient][data-offscreen] *,
+[data-ambient][data-offscreen] *::before,
+[data-ambient][data-offscreen] *::after {
+  animation-play-state: paused;
+}
+
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
+
+@utility container-content {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Brings a small inline control up to a fingertip-sized touch area.
+ *
+ * Several links on the page are set inline at text size — "Live", "Details",
+ * "Source", the footer column — which draws them about 20px tall. That is fine
+ * for a cursor and poor for a thumb: the guidance is 44px, and these were less
+ * than half of it, sitting 12px apart.
+ *
+ * The hit area is extended with a pseudo-element rather than with padding, so
+ * nothing moves. The link is drawn exactly as it was and the row keeps its
+ * rhythm; only the region that responds to a tap grows. It applies on coarse
+ * pointers alone, so a mouse still gets the tight target it was designed with
+ * and neighbouring links cannot start swallowing each other's clicks. */
+@utility tap-target {
+  position: relative;
+
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline: -0.25rem;
+      top: 50%;
+      height: 44px;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+@utility container-wide {
+  width: 100%;
+  max-width: var(--container-wide);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Engineering-drawing grid. Pure CSS gradients, so it costs nothing at runtime
+   and scales to any viewport. */
+@utility blueprint-grid {
+  background-image: linear-gradient(
+      to right,
+      var(--grid-line) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: center center;
+}
+
+@utility blueprint-rules {
+  background-image: linear-gradient(
+    to right,
+    var(--grid-line-strong) 1px,
+    transparent 1px
+  );
+  background-size: var(--grid-size) 100%;
+  background-position: center top;
+}
+
+/* Dotted field — the softer, more "interface" cousin of the grid. */
+@utility dot-grid {
+  background-image: radial-gradient(
+    var(--grid-line-strong) 1px,
+    transparent 1px
+  );
+  background-size: var(--dot-size) var(--dot-size);
+  background-position: center center;
+}
+
+/* CRT scanlines. Kept very low contrast — this is texture, not a filter. */
+@utility scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--text) 100%, transparent) 0px,
+    color-mix(in oklab, var(--text) 100%, transparent) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: var(--scanline-opacity);
+}
+
+/* The colour behind a section: three large drifting blobs.
+ *
+ * Two of them carry the section's own accent; the third borrows the NEXT hue in
+ * the brand set via `--wash-c`, so the boundary between two sections is a
+ * blend rather than a hard switch. That overlap is what makes the page read as
+ * one continuous spectrum instead of eight coloured bands.
+ *
+ * Built from radial-gradients with no `filter: blur()`. A gradient that fades
+ * to transparent by 72% is already as soft as a blur would make it, and a blur
+ * on a 48rem element is one of the most expensive things a browser can be asked
+ * to composite every frame — doubly so while it animates.
+ *
+ * `overflow: hidden` is load-bearing: the blobs are deliberately larger than
+ * the section and hang off its corners, and without it they would bleed into
+ * the neighbours and muddy every hue on the page.
+ */
+@utility section-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+
+  /* No `will-change` here on purpose. A browser already promotes an element
+     for the duration of a running transform animation, so the hint buys
+     nothing while the blob is drifting — and it is a promise that outlives the
+     animation, which means every wash on the page holds a compositor layer the
+     size of a 52rem gradient for the whole visit, including the twenty-odd
+     that are off screen and now paused. On a phone that is the GPU memory
+     budget spent on things nobody is looking at. */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+  }
+
+  &::before {
+    top: -22rem;
+    left: -15rem;
+    width: 52rem;
+    height: 52rem;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--accent) 16%, transparent),
+      transparent 72%
+    );
+    animation: drift-a 26s var(--ease-in-out) infinite;
+  }
+
+  &::after {
+    right: -13rem;
+    bottom: -19rem;
+    width: 44rem;
+    height: 44rem;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--wash-c, var(--accent)) 12%, transparent),
+      transparent 72%
+    );
+    animation: drift-b 34s var(--ease-in-out) infinite;
+  }
+}
+
+/* A third blob, opted into per section for the ones that need more colour.
+   Separate utility rather than a third pseudo-element because an element only
+   has ::before and ::after. */
+@utility wash-extra {
+  position: absolute;
+  left: 38%;
+  top: 30%;
+  z-index: 0;
+  /* Capped against the viewport, not just the design width.
+   *
+   * At 34rem flat this blob starts 38% across a 390px phone and runs 544px
+   * wide, ending ~690px out. Nothing was clipping it, and a mobile browser
+   * sizes its layout viewport to fit the widest content — so one decorative
+   * circle was laying the whole page out at 685px and scaling it down to fit
+   * the screen. Every hairline, every 40px control and every line of body text
+   * arrived at ~57% of its intended size. `min()` keeps the desktop size
+   * exactly as it was (60vw passes 34rem at 907px wide) and makes the blob fit
+   * within the gutter on a phone. */
+  width: min(34rem, 56vw);
+  height: min(34rem, 56vw);
+  border-radius: 9999px;
+  pointer-events: none;
+  /* No `will-change` — same reasoning as `section-wash`: the promotion a
+     running transform animation gets automatically is enough, and the hint
+     would keep the layer alive after the animation is paused off screen. */
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--wash-c, var(--brand-pink)) 12%, transparent),
+    transparent 70%
+  );
+  animation: drift-c 42s var(--ease-in-out) infinite;
+}
+
+/* A card that belongs to its section's hue rather than being another grey box.
+ *
+ * The tint is a gradient rather than a flat fill so the card has a light
+ * direction, and it is applied as `background-image` so it layers over whatever
+ * `bg-surface-*` the card already carries instead of replacing it.
+ *
+ * The hover lift is a transform, so it moves nothing around it — the original
+ * card was built to avoid layout shift and that constraint still holds.
+ */
+@utility card-accent {
+  border-color: color-mix(in oklab, var(--accent) 20%, var(--line));
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--accent) 7%, transparent),
+    transparent 58%
+  );
+  transition:
+    border-color 500ms var(--ease-out),
+    box-shadow 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+
+  /* A printed card lifting off the page: the shadow falls further and
+     sharpens toward its hue, rather than a glow. */
+  &:hover {
+    transform: translate3d(0, -5px, 0);
+    border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, var(--accent) 40%, transparent),
+      0 28px 50px -30px color-mix(in oklab, var(--brand-ink) 70%, transparent);
+  }
+}
+
+/* The edge of a framed object: a hairline in the section's ink and a long,
+   soft shadow, the way a plate sits on paper. (Was a neon glow.) */
+@utility neon-edge {
+  border-color: color-mix(in oklab, var(--text) 22%, transparent);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.4) inset,
+    0 40px 80px -40px color-mix(in oklab, var(--brand-ink) 55%, transparent);
+}
+
+/* Iridescent text. Four brand hues clipped to the glyphs.
+ *
+ * The stops are the solved INKS, not the raw neons, and that is not a detail.
+ * This utility lands on the hero's third headline line and on the contact
+ * heading — real content. Against Soft White the raw neons measure 3.42, 3.94,
+ * 3.16 and 2.64:1; the last of those fails even the 3:1 large-text threshold,
+ * so a gradient built from them would put an unreadable word in the h1. The
+ * inks carry the same hues at 4.6:1+, so the text stays vivid and legible at
+ * any size, and the pair swaps with the theme.
+ *
+ * `background-clip: text` needs a transparent fill to show through, which means
+ * the text has no colour of its own — if the background fails to paint, the
+ * text is invisible rather than merely unstyled. Both the standard and
+ * `-webkit-` properties are set for that reason. */
+@utility text-iris {
+  /* No longer a gradient: emerald running into vermilion passes through a
+     muddy brown at the midpoint. The emphasis is the italic in the spark
+     colour instead — the same move as `em` in a heading. */
+  font-style: italic;
+  color: var(--vermilion-ink);
+}
+
+/* Outlined display type — hollow letters, the section's hue as the stroke.
+ *
+ * Solid below 40rem, outlined above it, for the same reason `nameplate` splits
+ * at that width: the stroke scales in `em`, so at the ~36px the mega clamp
+ * yields on a 375px phone, 0.018em is a 0.65px line. Sub-pixel hairlines
+ * render grey and broken, and this utility sits on real content — the hero's
+ * middle headline line — not only on decoration. Small viewports get a filled
+ * version in the same hue, which still clears AA at 4.6:1.
+ *
+ * The decorative users of this utility (the ghost numerals, the footer
+ * wordmark) already carry their own opacity, so the solid fallback reads as a
+ * ghost there too rather than suddenly becoming a solid block.
+ *
+ * `paint-order: stroke fill` puts the stroke underneath so it grows outward
+ * from the glyph edge instead of eating into it; without it a heavy stroke
+ * closes up the counters of a, e and g at display sizes. */
+@utility text-outline {
+  color: var(--accent-ink);
+
+  @media (min-width: 40rem) {
+    color: transparent;
+    -webkit-text-stroke: 0.012em var(--accent-ink);
+    paint-order: stroke fill;
+  }
+}
+
+/* Misregistration: a second impression of the type in vermilion, knocked a
+ * fraction off the first, the way a two-colour print run slips. Text-shadow
+ * rather than a filter, so it costs one paint and no layer. */
+@utility text-split {
+  text-shadow: 0.035em 0.03em 0 color-mix(in oklab, var(--brand-vermilion) 75%, transparent);
+}
+
+/* Kept for compatibility; a glow has no place on paper. */
+@utility text-glow {
+  text-shadow: none;
+}
+
+/* Rotated label, like a sticker slapped on the layout. */
+@utility sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  padding: 0.4rem 0.75rem;
+  transform: rotate(-3deg);
+  box-shadow: 0 8px 24px -12px color-mix(in oklab, var(--accent) 90%, transparent);
+}
+
+/* Vertical running text for the page margins. */
+@utility text-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Fades a decorative layer out toward the edges so it never competes with
+   content or creates a hard seam. */
+@utility mask-fade-edges {
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 40%,
+    #000 30%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 40%,
+    #000 30%,
+    transparent 100%
+  );
+}
+
+@utility mask-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+}
+
+/* The hero nameplate: his name drawn as an outline rather than a fill.
+ *
+ * Two things this buys. The letters stop competing with the photograph — a
+ * solid near-black name at display size is the heaviest object on the page, and
+ * hollow letters hand that weight back to him. And because the counters are
+ * open, the ambient lights behind the name show through the type, so its colour
+ * changes across the width without a single gradient on the text itself.
+ *
+ * Solid below 40rem, outlined above it. Not a stylistic preference: the stroke
+ * scales in `em`, and at the 44px the clamp yields on a phone that is a ~1px
+ * line. A name is not decoration — if it is only legible on a large screen the
+ * treatment has failed, so small viewports get the filled version.
+ */
+@utility nameplate {
+  color: var(--text);
+
+  @media (min-width: 40rem) {
+    color: transparent;
+    -webkit-text-stroke: 0.02em var(--name-stroke);
+    paint-order: stroke fill;
+  }
+}
+
+/* Fine-grained film grain. One inline SVG, no image request. */
+@utility noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--noise-opacity);
+}
+
+/* Mono metadata labels — the technical texture of the design. */
+@utility label-mono {
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-label);
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+@utility text-balance-tight {
+  text-wrap: balance;
+  max-width: 22ch;
+}
+
+/* Body copy never exceeds a comfortable measure. */
+@utility measure {
+  max-width: 68ch;
+}
+
+@utility measure-tight {
+  max-width: 52ch;
+}
+
+/* ==========================================================================
+   UI LAYERS
+   The hero's piece: one app screen drawn five times — structure, layout,
+   tokens, components, states — stacked as planes in 3D beside a legend that
+   describes each. Behaviour and markup live in UILayers.jsx; this is the
+   geometry, the five renderings of the screen, and the legend.
+
+   Two type contexts. The screen scales with the frame from one
+   container-relative font-size on `.ui-layer`, everything inside it in `em`,
+   so the miniature shrinks as a whole rather than reflowing. The legend is
+   page copy and uses `rem` like the rest of the site.
+
+   Motion: the component writes `--ex` (0 flat → 1 exploded), `--rx`, `--ry`
+   and `--rz` on the root. Every plane's translateZ is `--ex × --step ×
+   (index − 2)`, centred on the middle plane so the stack grows both ways
+   and stays in frame. All planes are parallel — Chromium splits a
+   preserve-3d subtree along intersecting planes and a split layer loses its
+   rounded clip — so nothing here is ever turned edge-on.
+   ========================================================================== */
+
+@property --ex {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.ui-stack {
+  --ex: 0;
+  --rx: 0deg;
+  --ry: 0deg;
+  --rz: 0deg;
+  /* Gap between planes when fully exploded. */
+  --step: 2.2rem;
+
+  position: relative;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  container-type: inline-size;
+  background: var(--surface-1);
+  overflow: hidden;
+  /* Horizontal drags rotate; vertical touch moves still scroll the page. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Light under the stack, brightening as it opens. */
+.ui-stack::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    50% 42% at 30% 55%,
+    color-mix(in oklab, var(--accent) 32%, transparent),
+    transparent 72%
+  );
+  opacity: calc(0.45 + var(--ex) * 0.55);
+}
+
+/* --- The scene ----------------------------------------------------------- */
+
+.ui-scene {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 60%;
+  perspective: 1200px;
+  cursor: grab;
+}
+
+.ui-stack[data-dragging="true"] .ui-scene {
+  cursor: grabbing;
+}
+
+.ui-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  /* rotateZ inside rotateX: the exploded-diagram view, tipped back then
+     swung, so the separation between planes reads as height. */
+  transform: rotateX(var(--rx)) rotateZ(var(--rz)) rotateY(var(--ry));
+  will-change: transform;
+}
+
+.ui-layer {
+  position: absolute;
+  inset: 16% 10% 16% 10%;
+  border-radius: 10px;
+  transform: translateZ(calc(var(--ex) * var(--step) * (var(--i) - 2)));
+  will-change: transform;
+  font-size: clamp(9.5px, 2.75cqi, 12.5px);
+  line-height: 1.3;
+  color: var(--text);
+  transition: opacity var(--dur-reveal) var(--ease-out);
+}
+
+/* Each plane becomes a glass sheet as the stack opens; flat, the sheets are
+   invisible and the five renderings read as one finished screen. */
+.ui-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--surface-1) 84%, transparent);
+  border: 1px solid var(--line-accent);
+  box-shadow: 0 22px 44px -22px rgb(0 0 0 / 0.5);
+  opacity: var(--ex);
+}
+
+.ui-layer[data-dim="true"] {
+  opacity: 0.18;
+}
+
+.ui-layer[data-lit="true"]::before {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 36px color-mix(in oklab, var(--accent) 50%, transparent),
+    0 22px 44px -22px rgb(0 0 0 / 0.5);
+}
+
+/* The plane's number and name on its corner; appears with the sheet. */
+.ui-layer-tag {
+  position: absolute;
+  z-index: 1;
+  right: -0.4em;
+  top: -1.05em;
+  padding: 0.32em 0.6em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: var(--ex);
+  transform: translateY(calc((1 - var(--ex)) * 6px));
+}
+
+/* --- The screen: blocks shared by every mode ------------------------------ */
+
+.ui-screen {
+  position: absolute;
+  inset: 0;
+  padding: 0.8em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  border-radius: inherit;
+}
+
+.ui-blk {
+  position: relative;
+  flex: none;
+}
+
+.ui-blk-bar {
+  height: 2.2em;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.ui-blk-tabs {
+  height: 2em;
+  display: flex;
+  gap: 0.4em;
+  padding: 0.2em;
+}
+
+.ui-blk-card {
+  height: 7.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  padding: 0.8em;
+}
+
+.ui-blk-row {
+  height: 2.7em;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0 0.55em;
+}
+
+/* The two drawings under the painted surfaces exist only as diagrams: flat,
+   they would peek out around the edges of the finished screen. Same for the
+   token strip drawn on the card. */
+.ui-layer[data-mode="structure"] .ui-screen,
+.ui-layer[data-mode="layout"] .ui-screen,
+.ui-token-strip {
+  opacity: var(--ex);
+}
+
+/* --- 00 Structure: dashed wireframe with the element names ---------------- */
+
+.ui-layer[data-mode="structure"] .ui-screen {
+  border: 1px dashed var(--line-strong);
+}
+
+.ui-layer[data-mode="structure"] .ui-blk {
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+}
+
+.ui-tag {
+  position: absolute;
+  z-index: 1;
+  left: 0.45em;
+  top: -0.6em;
+  padding: 0 0.3em;
+  background: var(--surface-1);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66em;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+
+.ui-screen > .ui-tag {
+  left: 0.6em;
+  top: -0.55em;
+}
+
+.ui-wire {
+  position: relative;
+  display: block;
+  border: 1px dashed var(--line-strong);
+  border-radius: 3px;
+}
+
+.ui-wire-h2 {
+  width: 55%;
+  height: 1.1em;
+}
+
+.ui-wire-p {
+  width: 100%;
+  height: 1.7em;
+}
+
+.ui-wire-btn {
+  width: 3.9em;
+  height: 1.6em;
+  margin-top: auto;
+  border-radius: 999px;
+}
+
+/* --- 01 Layout: the column grid and the spacing scale --------------------- */
+
+.ui-grid-cols {
+  position: absolute;
+  inset: 0.8em;
+  background-image: repeating-linear-gradient(
+    to right,
+    color-mix(in oklab, var(--accent) 13%, transparent) 0,
+    color-mix(in oklab, var(--accent) 13%, transparent) calc((100% - 1.8em) / 4),
+    transparent calc((100% - 1.8em) / 4),
+    transparent calc((100% - 1.8em) / 4 + 0.6em)
+  );
+}
+
+.ui-layer[data-mode="layout"] .ui-blk {
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 3px;
+}
+
+/* A dashed rule across the gap above each block, with the gap's size. */
+.ui-layer[data-mode="layout"] .ui-blk::after {
+  content: "";
+  position: absolute;
+  left: -0.8em;
+  right: -0.8em;
+  top: -0.4em;
+  border-top: 1px dashed color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.ui-gap {
+  position: absolute;
+  z-index: 1;
+  right: 0.3em;
+  top: -0.85em;
+  padding: 0 0.3em;
+  border-radius: 2px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6em;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+/* --- 02 Tokens: the surfaces, painted; a strip of the values ------------- */
+
+.ui-layer[data-mode="tokens"] .ui-screen {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.ui-layer[data-mode="tokens"] .ui-blk-bar {
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-layer[data-mode="tokens"] .ui-blk-tabs {
+  background: var(--surface-3);
+  border-radius: 8px;
+}
+
+.ui-layer[data-mode="tokens"] .ui-blk-card {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.ui-layer[data-mode="tokens"] .ui-blk-row {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.ui-token-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin-top: auto;
+}
+
+.ui-token-dot {
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+
+.ui-token-type {
+  margin-left: 0.3em;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 1.15em;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.ui-token-mono {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62em;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+}
+
+.ui-token-radius {
+  margin-left: auto;
+  width: 1.3em;
+  height: 1.3em;
+  border-top: 2px solid var(--accent-ink);
+  border-left: 2px solid var(--accent-ink);
+  border-top-left-radius: 0.6em;
+}
+
+/* --- 03 Components: the content ------------------------------------------- */
+
+.ui-back {
+  width: 0.55em;
+  height: 0.55em;
+  border-left: 1.5px solid var(--text);
+  border-bottom: 1.5px solid var(--text);
+  transform: rotate(45deg);
+  margin-left: 0.3em;
+}
+
+.ui-title {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  font-size: 0.95em;
+  letter-spacing: -0.01em;
+}
+
+.ui-avatar {
+  margin-left: auto;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--brand-pink));
+}
+
+.ui-tab {
+  flex: 1;
+  text-align: center;
+  font-size: 0.76em;
+  line-height: 2.05;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+
+.ui-tab[data-on="true"] {
+  background: var(--surface-1);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+}
+
+.ui-card-title {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  font-size: 0.95em;
+  letter-spacing: -0.01em;
+}
+
+.ui-card-text {
+  font-size: 0.76em;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.ui-btn {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 0 0.9em;
+  height: 1.6em;
+  line-height: 1.6em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.ui-row-icon {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line-accent);
+}
+
+.ui-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.ui-row-name {
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.ui-row-sub {
+  font-size: 0.66em;
+  color: var(--text-faint);
+}
+
+.ui-toggle {
+  position: relative;
+  margin-left: auto;
+  width: 1.9em;
+  height: 1.1em;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.ui-toggle::after {
+  content: "";
+  position: absolute;
+  top: 0.12em;
+  left: 0.12em;
+  width: 0.86em;
+  height: 0.86em;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.ui-toggle[data-on="true"] {
+  background: var(--accent);
+}
+
+.ui-toggle[data-on="true"]::after {
+  left: auto;
+  right: 0.12em;
+}
+
+/* --- 04 States: focus, tooltip, hover, loading ---------------------------- */
+
+/* Sized and placed to sit on the components layer's button. */
+.ui-focus {
+  position: absolute;
+  left: calc(0.8em - 3px);
+  bottom: calc(0.8em - 3px);
+  width: calc(3.95em + 6px);
+  height: calc(1.28em + 6px);
+  border-radius: 999px;
+  border: 2px solid var(--accent-ink);
+}
+
+/* Beside the button rather than above it, so it never covers the card copy
+   when the screen is flat. */
+.ui-tooltip {
+  position: absolute;
+  left: calc(0.8em + 3.95em + 0.9em);
+  bottom: calc(0.8em + 0.64em);
+  transform: translateY(50%);
+  padding: 0.3em 0.5em;
+  border-radius: 4px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62em;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ui-tooltip::after {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0.4em solid transparent;
+  border-right-color: var(--text);
+}
+
+.ui-cursor {
+  position: absolute;
+  left: 3.2em;
+  bottom: 0.3em;
+  width: 1.1em;
+  height: 1.1em;
+  background: var(--text);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l16 9.5-7.3 1.6L9 21z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l16 9.5-7.3 1.6L9 21z'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+}
+
+.ui-hover {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line-accent);
+}
+
+.ui-skeleton {
+  position: absolute;
+  left: 2.65em;
+  right: 3.2em;
+  top: 34%;
+  height: 32%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-3) 25%,
+    var(--surface-2) 50%,
+    var(--surface-3) 75%
+  );
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.6s linear infinite;
+}
+
+@keyframes ui-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* --- The legend ----------------------------------------------------------- */
+
+.ui-legend {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem 1rem 1rem 0.25rem;
+}
+
+.ui-legend-kicker {
+  color: var(--accent-ink);
+}
+
+.ui-legend-title {
+  margin-top: 0.5rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(0.95rem, 3cqi, 1.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.ui-legend-list {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ui-legend-item {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    border-color var(--dur-micro) var(--ease-out);
+}
+
+.ui-legend-item:hover,
+.ui-legend-item[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--line-accent);
+}
+
+.ui-legend-num {
+  flex: none;
+  padding-top: 0.15rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-ink);
+}
+
+.ui-legend-text {
+  display: block;
+  min-width: 0;
+}
+
+.ui-legend-name {
+  display: block;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ui-legend-body {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.ui-hint {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  color: var(--text-faint);
+  opacity: calc(1 - var(--ex) * 0.5);
+}
+
+/* Touch devices: the stack's resting pose IS the exploded one.
+ *
+ * These are the same four values the component computes for a fully open stack
+ * (`--ex: 1` gives `--rx: 42deg` and `--rz: -9deg`), declared here so the pose
+ * is correct in the server-rendered HTML — before hydration, and if the bundle
+ * never arrives at all. Without it a phone's first paint is a flat rectangle
+ * that pops into 3D once React catches up.
+ *
+ * The component initialises its own state to match, so the first frame it writes
+ * is identical to this and there is no jump between the two. */
+@media (hover: none) {
+  .ui-stack {
+    --ex: 1;
+    --rx: 42deg;
+    --rz: -9deg;
+  }
+
+  /* The hint stays hidden. A drag does still rotate the stack here, but the
+     open pose fills the frame and the label had nowhere to sit that was not on
+     top of a plane. The legend rows below are the real affordance on touch. */
+  .ui-hint {
+    display: none;
+  }
+}
+
+/* Narrow frames (tablet columns, phones): stack the scene above the legend
+   instead of standing them side by side.
+ *
+ * Below `lg` the hero is a single column and this frame is capped at 26rem, so
+ * a 56/44 split gave the scene about 150px on a phone — an unreadable thumbnail
+ * of a UI — and left the legend too cramped for the descriptions, which were
+ * hidden until a layer was tapped. The point of the piece is the explanation,
+ * and hiding it is how a phone visitor ends up with a worse version of the
+ * argument than a desktop visitor gets.
+ *
+ * Stacked, both get the full width: the scene is large enough to read at an
+ * angle, and all five layers keep their description at a legible size.
+ *
+ * A media query rather than a container query because the element has to
+ * change its own `aspect-ratio`, and an element cannot respond to the
+ * container it establishes for its descendants. */
+@media (max-width: 1023px) {
+  .ui-stack {
+    aspect-ratio: auto;
+    /* A tighter spread than the desktop 2.2rem. On touch the stack is held
+       permanently open, so this separation is not a transient hover pose that
+       can spill for a moment — it is the resting height of the frame, and it
+       has to fit inside it. */
+    --step: 1.55rem;
+  }
+
+  /* Square, not 4:3. Tipped 42deg and exploded across five planes, the open
+     stack is close to as tall as it is wide; in a 4:3 frame its lowest plane
+     hung out of the bottom and sat on top of the legend heading. */
+  .ui-scene {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .ui-legend {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    padding: 0 1.15rem 1.25rem;
+  }
+
+  /* Full width means the type no longer has to shrink to fit beside the
+     scene. 11px body copy was never readable on a phone. */
+  .ui-legend-item {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .ui-legend-name {
+    font-size: 0.95rem;
+  }
+
+  .ui-legend-body {
+    display: block;
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+}
+
+/* ==========================================================================
+   CERTIFICATES
+   The documents are the evidence; everything here exists to present them
+   without competing with them. A certificate sits on a quiet "stage" as a
+   sheet of white paper with a real shadow, in both themes — certificates are
+   printed on white, and inverting them for dark mode would misrepresent them.
+   ========================================================================== */
+
+/* The surface a document rests on: a soft overhead light and a faint dot
+   field, so the paper has something to cast its shadow onto. */
+.cert-stage {
+  background-color: var(--surface-2);
+  background-image:
+    radial-gradient(
+      120% 85% at 50% 0%,
+      color-mix(in oklab, var(--surface-1) 88%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(var(--grid-line-strong) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    18px 18px;
+}
+
+.cert-paper {
+  background-color: #fff;
+  border-radius: 3px;
+  box-shadow: var(--paper-shadow);
+  transition:
+    transform var(--dur-slow) var(--ease-out),
+    box-shadow var(--dur-slow) var(--ease-out);
+}
+
+/* The card's hover: the sheet lifts toward the reader rather than the card
+   jumping, so the grid stays still and only the evidence moves. Gated on a
+   real hover-capable pointer: on touch, a tap would otherwise leave the sheet
+   stuck in its lifted pose. */
+@media (hover: hover) and (pointer: fine) {
+  .cert-card:hover .cert-paper,
+  .cert-card:focus-within .cert-paper {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--paper-shadow-lift);
+  }
+}
+
+.cert-card {
+  transition:
+    border-color var(--dur-reveal) var(--ease-out),
+    box-shadow var(--dur-reveal) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cert-card:hover {
+    border-color: color-mix(in oklab, var(--accent) 38%, var(--line));
+    box-shadow: 0 22px 48px -30px color-mix(in oklab, var(--text) 45%, transparent);
+  }
+}
+
+/* One visible focus ring for the whole card. The card's click target is a
+   button stretched over it, so without this the ring would outline only the
+   small "View certificate" label while the whole card is what activates. */
+.cert-card:has(.cert-open:focus-visible) {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+
+/* A loading sheet. Sits behind the image rather than replacing it, so the
+   document is never hidden behind JavaScript: without scripts the image simply
+   paints on top of it. */
+.cert-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklab, var(--surface-3) 70%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 300% 100%;
+  animation: cert-shimmer 1.6s linear infinite;
+}
+
+@keyframes cert-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cert-shimmer {
+    animation: none;
+  }
+  .cert-paper {
+    transition: none;
+  }
+}
+
+/* PDF pages are drawn to a canvas at a fixed resolution and scaled by CSS, so
+   a zoom step does not force pdf.js to redraw (and blank) the page. */
+.cert-canvas-fit canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
+
+/* ==========================================================================
+   SMOOTH SCROLL (Lenis, via Vengeance UI smooth-scroll)
+   From lenis/dist/lenis.css, plus one line of our own: the base layer sets
+   `scroll-behavior: smooth` on <html>, and native smoothing stacked under
+   Lenis's own makes anchor jumps lurch. While Lenis runs it owns the easing.
+   ========================================================================== */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+html.lenis {
+  scroll-behavior: auto;
+}
+
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+
+.lenis [data-lenis-prevent],
+.lenis [data-lenis-prevent-wheel],
+.lenis [data-lenis-prevent-touch] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   PAGE TRANSITIONS (React <ViewTransition>, see PageTransition.jsx)
+   Forward — into a case study: the old page sinks back and dims while the new
+   one wipes up from the bottom edge, like a sheet laid on top. Back reverses
+   it: the case study drops away and home wipes down into place. The project
+   cover is a shared element and morphs between its two positions instead.
+   ========================================================================== */
+
+/* Clicks during the ~600ms overlay land on the live page, not on a snapshot. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* The nav is the fixed reference point: it does not move, so the reader sees
+   the content travel rather than the whole screen. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* Everything outside the page wrapper (the page background, the footer)
+   swaps without a crossfade; the page itself carries the motion. */
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(.nav-forward) {
+  animation: 520ms var(--ease-in-out) both page-sink;
+}
+::view-transition-new(.nav-forward) {
+  animation: 760ms var(--ease-out) both page-wipe-up;
+}
+::view-transition-old(.nav-back) {
+  animation: 520ms var(--ease-in-out) both page-drop;
+}
+::view-transition-new(.nav-back) {
+  animation: 760ms var(--ease-out) both page-wipe-down;
+}
+
+@keyframes page-sink {
+  to {
+    opacity: 0;
+    transform: translateY(-3%) scale(0.94);
+  }
+}
+@keyframes page-drop {
+  to {
+    opacity: 0;
+    transform: translateY(3%) scale(0.94);
+  }
+}
+@keyframes page-wipe-up {
+  from {
+    clip-path: inset(100% 0 0 0 round 2rem 2rem 0 0);
+    transform: translateY(12vh);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 0);
+    transform: none;
+  }
+}
+@keyframes page-wipe-down {
+  from {
+    clip-path: inset(0 0 100% 0 round 0 0 2rem 2rem);
+    transform: translateY(-12vh);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 0);
+    transform: none;
+  }
+}
+
+/* The cover travelling from the project list into the case-study header. */
+::view-transition-group(.morph) {
+  z-index: 60;
+  animation-duration: 760ms;
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: morph-blur;
+}
+@keyframes morph-blur {
+  35% {
+    filter: blur(6px) saturate(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* ==========================================================================
+   TEXT ROLL (Skiper 58, see skiper58.jsx)
+   Two copies of a label, one parked below the line. Hovering or focusing the
+   surrounding `.group` rolls each letter of the top copy up and its twin
+   into place, the delay per letter set inline so they ripple outward.
+   ========================================================================== */
+
+.text-roll {
+  position: relative;
+  display: inline-block;
+}
+
+.text-roll-track {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  /* Room for descenders inside the clip, without moving the baseline. */
+  padding-block: 0.08em;
+  margin-block: -0.08em;
+}
+
+.text-roll-letter {
+  display: inline-block;
+  transition: transform 460ms var(--ease-out) var(--roll-delay, 0ms);
+  will-change: transform;
+}
+
+.text-roll-letter[data-position="bottom"] {
+  transform: translateY(115%);
+}
+
+:is(.group:hover, .group:focus-visible) .text-roll-letter[data-position="top"] {
+  transform: translateY(-115%);
+}
+
+:is(.group:hover, .group:focus-visible) .text-roll-letter[data-position="bottom"] {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-roll-letter {
+    transition: none;
+  }
+  :is(.group:hover, .group:focus-visible) .text-roll-letter[data-position="top"] {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   BORDER BEAM (Vengeance UI, see border-beam.jsx)
+   ========================================================================== */
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-beam::after {
+    animation: none !important;
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   CURSOR SPOTLIGHT (after Vengeance UI glow-border-card)
+   Any element with `data-spotlight` lights up under the pointer: a soft glow
+   in the section's hue inside the card, and the hue running along the border
+   nearest the pointer. SpotlightRuntime writes --spot-x/--spot-y on the
+   hovered card only, from one delegated listener for the whole page.
+   `isolation` lets the glow sit at z-index -1: above the card's own surface,
+   below its content, so text is never tinted.
+   ========================================================================== */
+
+[data-spotlight] {
+  isolation: isolate;
+}
+
+[data-spotlight]::before,
+[data-spotlight]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms var(--ease-out);
+}
+
+[data-spotlight]::before {
+  z-index: -1;
+  background: radial-gradient(
+    28rem circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    var(--accent-glow),
+    transparent 46%
+  );
+}
+
+[data-spotlight]::after {
+  padding: 1px;
+  background: radial-gradient(
+    16rem circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    var(--accent),
+    transparent 62%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-spotlight]:hover::before,
+  [data-spotlight]:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   HERO SCROLL EXIT
+   As the hero scrolls away its three headline lines slide apart in opposite
+   directions and the demo frame lifts — the statement breaking up as you
+   leave it. Pure CSS scroll-driven animation: runs on the compositor, needs
+   no JavaScript, and is simply absent where unsupported or reduced motion is
+   set, leaving the hero static.
+   ========================================================================== */
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-hero-line] {
+      animation: hero-line-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 85vh;
+    }
+    [data-hero-line="0"] {
+      --hero-shift: -22vw;
+    }
+    [data-hero-line="1"] {
+      --hero-shift: 16vw;
+    }
+    [data-hero-line="2"] {
+      --hero-shift: -12vw;
+    }
+
+    [data-hero-lift] {
+      animation: hero-lift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+  }
+}
+
+@keyframes hero-line-out {
+  to {
+    transform: translateX(var(--hero-shift, 0));
+    opacity: 0.25;
+  }
+}
+
+@keyframes hero-lift {
+  to {
+    transform: translateY(-14vh) rotate(-2deg);
+  }
+}
+
+/* ==========================================================================
+   CASE STUDY MOTION (see CaseStudy.jsx)
+   Nearly all of it is scroll-driven animation: the browser ties each keyframe
+   to scroll position itself, on the compositor, with no scroll listener.
+   Three rules hold throughout:
+   - Defaults outside the @supports block are the finished state, so a browser
+     without scroll timelines just shows a static, complete page.
+   - Everything that moves sits under `prefers-reduced-motion: no-preference`.
+     The progress bar is the exception: it reports position, it is not motion.
+   - Start states only ever apply to content below the fold, and they are CSS,
+     so nothing waits on JavaScript to become visible.
+   ========================================================================== */
+
+/* Reading progress, in the project's hue. Hidden until a timeline drives it. */
+.cs-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 70;
+  height: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+/* The header's two glows, drifting on long unequal cycles. */
+.cs-aurora {
+  position: absolute;
+  width: min(56rem, 95vw);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, var(--accent-glow), transparent);
+}
+.cs-aurora-a {
+  top: -45%;
+  left: -18%;
+}
+.cs-aurora-b {
+  right: -22%;
+  bottom: -60%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--brand-violet) 20%, transparent),
+    transparent
+  );
+}
+
+/* Named timelines. Harmless where unsupported, so they live outside @supports. */
+.cs-block {
+  view-timeline-name: --cs-block;
+}
+.cs-fill {
+  view-timeline-name: --cs-fill;
+}
+.cs-timeline {
+  view-timeline-name: --cs-timeline;
+}
+.cs-marquee {
+  view-timeline-name: --cs-marquee;
+}
+.cs-rail-fill {
+  transform-origin: 0 50%;
+}
+.cs-timeline-fill {
+  transform-origin: 50% 0;
+}
+.cs-ribbon {
+  view-timeline-name: --cs-ribbon;
+}
+.cs-bar {
+  transform-origin: 0 50%;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* The application pipeline draws itself from Applied to Hired. The timeline
+       is named on the figure: view() does not track SVG children. */
+    .cs-ribbon-line {
+      stroke-dasharray: 1;
+      animation: cs-ribbon-draw linear both;
+      animation-timeline: --cs-ribbon;
+      animation-range: entry 30% cover 55%;
+    }
+
+    /* Bars grow from their baseline as the chart arrives. */
+    .cs-bar {
+      animation: cs-scale-x linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 100%;
+    }
+  }
+
+  .cs-progress {
+    animation: cs-progress linear both;
+    animation-timeline: scroll(root);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Header drifts up and fades as you leave it. */
+    .cs-header-inner {
+      animation: cs-header-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 75vh;
+    }
+
+    /* Cover grows into place as it arrives. */
+    .cs-cover {
+      animation: cs-cover-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+
+    /* Section rails fill over the stretch where the section is being read:
+       fully on screen if it is short, filling the screen if it is tall. */
+    .cs-rail-fill {
+      animation: cs-scale-x linear both;
+      animation-timeline: --cs-block;
+      animation-range: contain 0% contain 100%;
+    }
+
+    /* Body paragraphs lift into place on arrival. */
+    .cs-prose > p {
+      animation: cs-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 75%;
+    }
+
+    /* The lead paragraph inks in line by line. The span is inline, so its
+       background runs through every line fragment end to end, and sliding a
+       hard-edged gradient along that one long strip fills the first line, then
+       the second, and so on. Text is clipped to the gradient and stays real,
+       selectable text throughout. */
+    .cs-fill > span {
+      background-image: linear-gradient(
+        90deg,
+        var(--text) 0 49%,
+        color-mix(in oklab, var(--text) 20%, transparent) 51% 100%
+      );
+      background-size: 200% 100%;
+      background-position: 100% 0;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: cs-ink linear both;
+      animation-timeline: --cs-fill;
+      animation-range: entry 80% cover 62%;
+    }
+
+    /* Challenges: the rail draws down the list; each node lights as its
+       card arrives. */
+    .cs-timeline-fill {
+      animation: cs-scale-y linear both;
+      animation-timeline: --cs-timeline;
+      animation-range: entry 35% cover 70%;
+    }
+    .cs-node {
+      animation: cs-node linear both;
+      animation-timeline: view();
+      animation-range: entry 100% cover 35%;
+    }
+
+    /* Gallery: the title slides past, and each tile wipes open. */
+    .cs-marquee-track {
+      animation: cs-marquee linear both;
+      animation-timeline: --cs-marquee;
+      animation-range: cover 0% cover 100%;
+    }
+    .gallery-tile {
+      animation: cs-tile-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 90%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cs-aurora-a {
+    animation: drift-a 22s ease-in-out infinite;
+  }
+  .cs-aurora-b {
+    animation: drift-b 28s ease-in-out infinite;
+  }
+}
+
+/* Cards that lean toward the pointer. SpotlightRuntime writes the pointer's
+   position as a 0–1 fraction (--spot-px / --spot-py); the card tilts away
+   from its centre by at most a few degrees and lifts slightly. The quick
+   linear transition while hovering smooths the per-frame updates; the slow
+   eased one on leave lets it settle back. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-tilt] {
+    transition:
+      transform 650ms var(--ease-out),
+      box-shadow 500ms var(--ease-out);
+  }
+  [data-tilt]:hover {
+    transform: perspective(900px)
+      rotateX(calc((0.5 - var(--spot-py, 0.5)) * 8deg))
+      rotateY(calc((var(--spot-px, 0.5) - 0.5) * 10deg)) translateY(-4px);
+    transition:
+      transform 160ms linear,
+      box-shadow 500ms var(--ease-out);
+  }
+}
+
+/* Next project: a circle of the next project's colour (or cover) grows from
+   the pointer to flood the band. Keyboard focus floods it too, which doubles
+   as the focus indicator. */
+.cs-next-reveal {
+  clip-path: circle(0px at var(--spot-x, 88%) var(--spot-y, 50%));
+  transition: clip-path 800ms var(--ease-out);
+}
+.cs-next:is(:hover, :focus-within) .cs-next-reveal {
+  clip-path: circle(150vmax at var(--spot-x, 88%) var(--spot-y, 50%));
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-next-reveal {
+    transition-duration: 1ms;
+  }
+}
+
+@keyframes cs-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes cs-header-out {
+  to {
+    transform: translateY(-10vh);
+    opacity: 0.1;
+  }
+}
+@keyframes cs-cover-in {
+  from {
+    transform: scale(0.9);
+  }
+}
+@keyframes cs-scale-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes cs-ribbon-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes cs-scale-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes cs-rise {
+  from {
+    opacity: 0.15;
+    transform: translateY(28px);
+  }
+}
+@keyframes cs-ink {
+  to {
+    background-position: 0% 0;
+  }
+}
+@keyframes cs-node {
+  from {
+    transform: scale(0.55);
+  }
+  to {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 5px var(--accent-soft);
+  }
+}
+@keyframes cs-marquee {
+  from {
+    transform: translateX(4%);
+  }
+  to {
+    transform: translateX(-38%);
+  }
+}
+@keyframes cs-tile-in {
+  from {
+    clip-path: inset(10% 6% 10% 6% round 18px);
+    transform: translateY(48px) scale(0.96);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 0);
+  }
+}
+
+/* ==========================================================================
+   EDITORIAL REDESIGN — Ivory, Emerald & Vermilion
+   The page as a printed object: ivory paper, emerald ink, vermilion as the
+   spark. Everything in this block follows the same three rules as the case
+   study motion above:
+   - Defaults are the finished state, so a browser without scroll timelines,
+     or with reduced motion, shows a complete static page.
+   - Hidden start states only ever apply below the fold or behind a CSS-only
+     timer, never behind JavaScript.
+   - Transforms, opacity and clip-path only.
+   ========================================================================== */
+
+/* --- The emerald slab (footer) ------------------------------------------- */
+
+/* Pure #046A38 with ivory type (5.7:1). Vermilion is banned here: against
+   emerald it measures 1.6:1 and the two hues vibrate. Accents go ivory and
+   the emphasis italic becomes a pale coral (5.0:1). */
+[data-surface="emerald"] {
+  color-scheme: dark;
+  --bg: #046a38;
+  --surface-1: #0a7541;
+  --surface-2: #0f7f48;
+  --surface-3: #168a51;
+  --line: rgb(249 235 215 / 0.2);
+  --line-strong: rgb(249 235 215 / 0.38);
+  --text: #f9ebd7;
+  --text-muted: #f3e3cb;
+  --text-faint: #ead7b9;
+  --accent: #f9ebd7;
+  --accent-ink: #f9ebd7;
+  --accent-fg: #046a38;
+  --accent-soft: rgb(249 235 215 / 0.12);
+  --accent-glow: rgb(249 235 215 / 0.25);
+  --line-accent: rgb(249 235 215 / 0.4);
+  --emerald-ink: #f9ebd7;
+  --vermilion-ink: #ffd6c7;
+  --em-color: #ffd6c7;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Display-size emphasis uses the true vermilion (3.5:1 on ivory, 3.7:1 on an
+   ink panel — both clear the 3:1 large-text bar); small italic keeps the
+   deeper ink. */
+:root {
+  --em-color: var(--brand-vermilion);
+}
+:is(h1, h2, .text-display, .text-mega) em {
+  color: var(--em-color);
+}
+
+/* --- Intro curtain (IntroCurtain.jsx) ------------------------------------ */
+
+.intro-curtain {
+  display: none;
+}
+
+html[data-intro="on"] {
+  --intro-delay: 1500ms;
+}
+
+html[data-intro="on"] .intro-curtain {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.intro-sheet {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+/* Emerald lifts first, the vermilion sheet under it a beat later; both bow
+   at the bottom edge as they go, like a sheet of paper pulled upward. */
+.intro-sheet-v {
+  background: var(--brand-vermilion);
+  animation: intro-lift 950ms var(--ease-expo) 1380ms both;
+}
+
+.intro-sheet-e {
+  background: var(--brand-emerald);
+  color: var(--brand-ivory);
+  animation: intro-lift 950ms var(--ease-expo) 1180ms both;
+}
+
+.intro-name {
+  font-size: clamp(3.5rem, 1.6rem + 9.5vw, 11.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+}
+
+.intro-name em {
+  color: #ffd6c7;
+}
+
+.intro-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.intro-line > span {
+  display: block;
+  animation: intro-rise 1000ms var(--ease-out) 80ms both;
+}
+
+.intro-line + .intro-line > span {
+  animation-delay: 190ms;
+}
+
+.intro-bar {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  margin-bottom: 0.9rem;
+  background: rgb(249 235 215 / 0.25);
+  overflow: hidden;
+}
+
+.intro-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brand-ivory);
+  transform-origin: 0 50%;
+  animation: intro-bar 1100ms var(--ease-in-out) both;
+}
+
+@property --intro-n {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.intro-count {
+  font-size: clamp(3rem, 7vw, 6rem);
+  line-height: 0.8;
+  font-variant-numeric: tabular-nums;
+  animation: intro-count 1100ms var(--ease-in-out) both;
+}
+
+.intro-count::after {
+  counter-reset: intro var(--intro-n);
+  content: counter(intro) "%";
+}
+
+@keyframes intro-lift {
+  to {
+    transform: translate3d(0, -104%, 0);
+    border-radius: 0 0 50% 50% / 0 0 14vh 14vh;
+    visibility: hidden;
+  }
+}
+@keyframes intro-rise {
+  from {
+    transform: translate3d(0, 105%, 0) rotate(3deg);
+  }
+}
+@keyframes intro-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes intro-count {
+  to {
+    --intro-n: 100;
+  }
+}
+
+/* --- Reading progress and paper grain ------------------------------------ */
+
+.page-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 70;
+  height: 3px;
+  background: var(--brand-vermilion);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .page-progress {
+    animation: cs-progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* One static layer of fine grain over the whole page, so every flat field of
+   ivory, emerald and vermilion reads as printed rather than lit. */
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.16 0 0 0 0 0.1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--noise-opacity);
+}
+
+/* --- The page as a sheet over the footer -------------------------------- */
+
+/* `main` is raised over the footer and opaque. On a desktop window tall
+   enough to show the whole footer, the footer is sticky to the bottom of the
+   viewport underneath it, so the last stretch of scroll lifts the page off
+   the footer instead of scrolling the footer up into view. The footer runs
+   up under main's rounded bottom corners (negative margin, same padding) so
+   the corners always show emerald, never a notch of ivory. */
+.page-sheet {
+  position: relative;
+  z-index: 1;
+  background-color: var(--bg);
+}
+
+/* A zero-height marker at the very end of the sheet. Its view timeline is
+   the reveal: it starts as the sheet's bottom edge reaches the bottom of the
+   window. `timeline-scope` lets the footer (a sibling of main) use it. */
+body {
+  timeline-scope: --sheet-end;
+}
+.sheet-end {
+  height: 1px;
+  view-timeline-name: --sheet-end;
+}
+
+@media (min-width: 1024px) and (min-height: 820px) {
+  .page-sheet {
+    border-radius: 0 0 2.75rem 2.75rem;
+    box-shadow: 0 40px 70px -30px rgb(11 42 27 / 0.45);
+  }
+  .footer-reveal {
+    position: sticky;
+    bottom: 0;
+    z-index: 0;
+    margin-top: -2.75rem;
+    padding-top: 2.75rem;
+  }
+}
+
+/* --- Section heads (SectionHead.jsx) ------------------------------------- */
+
+/* A word inside its own mask. Padded so italic overhang and descenders are
+   not clipped, with the padding cancelled by margin so spacing is unchanged. */
+.sw {
+  display: inline-block;
+  overflow: clip;
+  vertical-align: top;
+  padding: 0.06em 0.14em 0.16em 0.04em;
+  margin: -0.06em -0.14em -0.16em -0.04em;
+}
+
+.sw-i {
+  display: inline-block;
+  transform-origin: 0 100%;
+}
+
+/* A split heading never fades as a block — its words do the moving. */
+html[data-reveals="armed"] [data-reveal="split"] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+html[data-reveals="armed"] [data-reveal="split"] .sw-i {
+  transition: transform 1100ms var(--ease-out)
+    calc(var(--i, 0) * 70ms + var(--reveal-delay, 0ms));
+}
+
+html[data-reveals="armed"] [data-reveal="split"]:not([data-shown]) .sw-i {
+  transform: translate3d(0, 115%, 0) rotate(5deg);
+}
+
+.section-rule {
+  transform-origin: 0 50%;
+}
+
+/* The intro paragraph that inks in as it is read — the case study's lead
+   treatment, available to any section. */
+.ink-fill {
+  view-timeline-name: --ink-fill;
+}
+
+/* On the ivory paper the drifting colour washes read as smudges — green and
+   red blurred together go brown — so paper sections are left clean and the
+   washes glow only on the ink panels, where they read as light. */
+section:not([data-surface]) > :is(.section-wash, .wash-extra) {
+  display: none;
+}
+
+/* On an ink panel a vermilion glow mixes with the green ground into brown,
+   so the panel's light is jade — emerald lit from inside. */
+[data-surface="ink"] .section-wash::before {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--brand-jade) 20%, transparent),
+    transparent 72%
+  );
+}
+[data-surface="ink"] .section-wash::after {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--brand-jade) 12%, transparent),
+    transparent 72%
+  );
+}
+
+/* A giant ✺ turning slowly in the corner of every ink panel. */
+.ink-mark {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ink-mark::before {
+  content: "✺";
+  position: absolute;
+  right: -0.12em;
+  top: -0.22em;
+  font-family: var(--font-display), serif;
+  font-size: clamp(16rem, 34vw, 32rem);
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.08;
+  animation: spin-slow 90s linear infinite;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .section-rule {
+      animation: cs-scale-x linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 38%;
+    }
+
+    .ink-fill > span {
+      background-image: linear-gradient(
+        90deg,
+        var(--text) 0 49%,
+        color-mix(in oklab, var(--text) 22%, transparent) 51% 100%
+      );
+      background-size: 200% 100%;
+      background-position: 100% 0;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: cs-ink linear both;
+      animation-timeline: --ink-fill;
+      animation-range: entry 70% cover 60%;
+    }
+  }
+
+  /* Ink panels unroll: a rounded card inset from the edges opens out to the
+     full bleed as it arrives. Wider screens only — on a phone the inset would
+     only cost reading width. */
+  @media (prefers-reduced-motion: no-preference) and (min-width: 768px) {
+    [data-sheet] {
+      animation: sheet-unroll linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+
+@keyframes sheet-unroll {
+  from {
+    clip-path: inset(0 3.5vw 0 3.5vw round 3rem);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 0);
+  }
+}
+
+/* --- Hero (Hero.jsx, HeroBackdrop.jsx, HeroObjects.jsx) ----------------- */
+
+/* Below the status rail at every width, so the rail's coordinates and clock
+   never sit on the vermilion. */
+#home {
+  --sun-size: clamp(13rem, 29vw, 29rem);
+  --sun-right: clamp(-5rem, 4vw - 3rem, 4rem);
+  --sun-top: clamp(7rem, 4.5rem + 8vw, 13rem);
+}
+
+/* On a phone the headline needs the full width, so the sun shrinks into the
+   top-right corner, clear of every line of type, and loses its outer orbit. */
+@media (max-width: 767px) {
+  #home {
+    --sun-size: 10rem;
+    --sun-right: -3.75rem;
+    --sun-top: 4.5rem;
+  }
+  .hero-orbit-b {
+    display: none;
+  }
+}
+
+/* Six column rules, the page grid, fading out downward. */
+.hero-rules {
+  background-image: linear-gradient(to right, var(--grid-line-strong) 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 20%, transparent 85%);
+}
+
+.hero-sun-wrap {
+  position: absolute;
+  right: var(--sun-right);
+  top: var(--sun-top);
+  width: var(--sun-size);
+  aspect-ratio: 1;
+}
+
+.hero-sun {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--brand-vermilion);
+  box-shadow: 0 50px 120px -40px color-mix(in oklab, var(--brand-vermilion) 75%, transparent);
+  transform: translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -10px), 0);
+}
+
+.hero-orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--emerald-ink) 50%, transparent);
+}
+
+.hero-orbit-a {
+  inset: -13%;
+  transform: translate3d(calc(var(--px, 0) * -30px), calc(var(--py, 0) * -22px), 0);
+}
+
+.hero-orbit-b {
+  inset: -30%;
+  border-style: dashed;
+  border-color: color-mix(in oklab, var(--emerald-ink) 32%, transparent);
+  animation: spin-slow 70s linear infinite;
+}
+
+.hero-orbit-dot {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+  border-radius: 50%;
+  background: var(--brand-emerald);
+  box-shadow: 0 0 0 4px var(--bg);
+}
+
+/* The photograph, resting on the lower-left of the sun. */
+.hero-print-wrap {
+  position: absolute;
+  right: calc(var(--sun-right) + var(--sun-size) * 0.5);
+  top: calc(var(--sun-top) + var(--sun-size) * 0.42);
+  width: clamp(8rem, 10.5vw, 11rem);
+}
+
+.hero-print {
+  position: relative;
+  margin: 0;
+  padding: 0.5rem 0.5rem 0.55rem;
+  background: var(--surface-1);
+  rotate: -7deg;
+  box-shadow:
+    0 2px 4px rgb(11 42 27 / 0.12),
+    0 34px 50px -26px rgb(11 42 27 / 0.6);
+  animation: float-y 9s var(--ease-in-out) infinite;
+}
+
+.hero-print-tape {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: -0.7rem;
+  width: 4.5rem;
+  height: 1.35rem;
+  translate: -50% 0;
+  rotate: 4deg;
+  background: color-mix(in oklab, var(--brand-emerald) 55%, transparent);
+}
+
+/* The sun sets as the hero scrolls away; the print drifts up off it. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-sun-wrap {
+      animation: sun-set linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 110vh;
+    }
+    .hero-print-wrap {
+      animation: print-drift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+  }
+}
+
+@keyframes sun-set {
+  to {
+    transform: translate3d(-4vw, 26vh, 0) scale(1.18);
+  }
+}
+@keyframes print-drift {
+  to {
+    transform: translate3d(-2vw, -16vh, 0) rotate(-6deg);
+  }
+}
+
+.scroll-cue::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brand-vermilion);
+  animation: scroll-cue 2.2s var(--ease-in-out) infinite;
+}
+
+@keyframes scroll-cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* Links whose underline draws in from the left and leaves to the right. */
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 100% 100%;
+  background-repeat: no-repeat;
+  transition:
+    background-size 600ms var(--ease-out),
+    color 300ms var(--ease-out);
+}
+.link-draw:hover,
+.link-draw:focus-visible {
+  background-size: 100% 1px;
+  background-position: 0 100%;
+}
+
+/* Chips that turn to solid ink and tip on hover. */
+.chip-hover {
+  transition:
+    background-color 400ms var(--ease-out),
+    color 400ms var(--ease-out),
+    border-color 400ms var(--ease-out),
+    transform 500ms var(--ease-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip-hover:hover {
+    background-color: var(--text);
+    border-color: var(--text);
+    color: var(--bg);
+    transform: translateY(-3px) rotate(calc(-3deg + (var(--chip-i, 0) - 4) * 0.8deg));
+  }
+}
+
+/* The rotating seal (SpinBadge.jsx). */
+.spin-badge {
+  background: var(--surface-1);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 24px 44px -26px rgb(11 42 27 / 0.55);
+}
+.spin-badge-ring {
+  animation: spin-slow 22s linear infinite;
+}
+
+/* --- Ribbons (TechTicker.jsx) -------------------------------------------- */
+
+.ribbons {
+  display: grid;
+  align-items: center;
+}
+
+.ribbon {
+  grid-area: 1 / 1;
+  width: 120vw;
+  margin-left: -10vw;
+}
+
+.ribbon-front {
+  z-index: 2;
+  rotate: -3deg;
+}
+
+.ribbon-back {
+  z-index: 1;
+  rotate: 2.5deg;
+}
+
+.ribbon-band {
+  display: flex;
+  overflow: hidden;
+  padding-block: clamp(0.95rem, 1.5vw, 1.35rem);
+  box-shadow: 0 24px 40px -26px rgb(11 42 27 / 0.55);
+}
+
+@keyframes ticker-reverse {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ribbon-front .ribbon-band {
+      animation: ribbon-left linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+    .ribbon-back .ribbon-band {
+      animation: ribbon-right linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+
+@keyframes ribbon-left {
+  from {
+    transform: translateX(5%);
+  }
+  to {
+    transform: translateX(-5%);
+  }
+}
+@keyframes ribbon-right {
+  from {
+    transform: translateX(-5%);
+  }
+  to {
+    transform: translateX(5%);
+  }
+}
+
+/* --- Buttons (Button.jsx) ------------------------------------------------ */
+
+/* The flood: a bowed sheet of colour rising from under the label and
+   flattening as it fills. Ink on paper; ivory on any dark ground. */
+.btn {
+  --flood: var(--brand-ink);
+  --flood-fg: var(--brand-ivory);
+}
+:is([data-theme="dark"], [data-surface="ink"], [data-surface="emerald"]) .btn {
+  --flood: var(--brand-ivory);
+  --flood-fg: var(--brand-ink);
+}
+
+.btn-flood {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: var(--flood);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  transform: translate3d(0, 102%, 0);
+  transition:
+    transform 700ms var(--ease-out),
+    border-radius 700ms var(--ease-out);
+}
+
+.btn-flood-accent .btn-flood {
+  background: var(--accent);
+}
+
+.btn:hover .btn-flood,
+.btn:focus-visible .btn-flood {
+  transform: none;
+  border-radius: 0;
+}
+
+/* The floating pill behind the nav's links and controls. Nearly opaque: a
+   backdrop-filter cannot work inside the header (it is a backdrop root, see
+   Nav.jsx). */
+.nav-pill {
+  background-color: color-mix(in oklab, var(--surface-1) 88%, transparent);
+  box-shadow: 0 12px 30px -20px rgb(11 42 27 / 0.45);
+}
+
+/* --- Footer (Footer.jsx) ------------------------------------------------- */
+
+.footer-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 12% 0%, rgb(249 235 215 / 0.12), transparent 70%),
+    radial-gradient(50% 60% at 100% 100%, rgb(11 42 27 / 0.45), transparent 70%);
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* The footer's content rises out from under the lifting page... */
+    .footer-reveal > .container-wide {
+      animation: footer-in linear both;
+      animation-timeline: --sheet-end;
+      animation-range: cover 0% cover 45%;
+    }
+    /* ...and the name rises out of the bottom edge, letter by letter. */
+    .footer-letter {
+      animation: footer-letter linear both;
+      animation-timeline: --sheet-end;
+      animation-range: cover calc(4% + var(--i, 0) * 2.5%) cover calc(30% + var(--i, 0) * 2.5%);
+    }
+  }
+}
+
+@keyframes footer-in {
+  from {
+    transform: translate3d(0, -14%, 0);
+    opacity: 0.2;
+  }
+}
+@keyframes footer-letter {
+  from {
+    transform: translate3d(0, 75%, 0) rotate(6deg);
+  }
+}
+
+/* --- Contact (Contact.jsx) ----------------------------------------------- */
+
+/* A second sun, setting into the bottom corner behind the form. */
+.contact-sun {
+  position: absolute;
+  z-index: 0;
+  right: clamp(-12rem, -8vw, -4rem);
+  bottom: clamp(-16rem, -12vw, -6rem);
+  width: clamp(18rem, 40vw, 38rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--brand-vermilion);
+  pointer-events: none;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .contact-sun {
+      animation: contact-sun linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 60%;
+    }
+  }
+}
+
+@keyframes contact-sun {
+  from {
+    transform: translate3d(0, 35%, 0) scale(0.8);
+  }
+}
+
+/* --- Case study header (CaseStudy.jsx) ----------------------------------- */
+
+/* The two blurred auroras become the house sun: one solid disc in the
+   project's own hue, standing off the right edge of the header and drifting
+   on the same slow cycle. The second glow is retired — blurred colour on
+   ivory reads as a smudge. */
+.cs-aurora-a {
+  display: none;
+}
+.cs-aurora-b {
+  width: clamp(14rem, 30vw, 28rem);
+  right: clamp(-8rem, -4vw, -2rem);
+  top: clamp(5rem, 9vw, 8rem);
+  bottom: auto;
+  background: var(--accent);
+  box-shadow: 0 50px 110px -40px var(--accent-glow);
+}
+@media (max-width: 767px) {
+  .cs-aurora-b {
+    width: 9rem;
+    right: -3rem;
+    top: 4.5rem;
+  }
+}
+
+/* --- Experience disclosure (ExperienceTimeline.jsx) ---------------------- */
+
+/* The rail node sends out one ring each time a role opens. */
+.xp-ripple {
+  animation: xp-ripple 900ms var(--ease-out) both;
+}
+@keyframes xp-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+/* A band of the section's light sweeping down the card as it opens. */
+.xp-sweep {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--accent) 22%, transparent) 50%,
+    transparent
+  );
+  animation: xp-sweep 1100ms var(--ease-in-out) both;
+}
+@keyframes xp-sweep {
+  from {
+    transform: translate3d(0, -100%, 0);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(0, 900%, 0);
+    opacity: 0;
+  }
+}
+
+/* --- Project archive rows (ProjectArchive.jsx) --------------------------- */
+
+/* Hovering a row sweeps the section's colour across it from the left. A
+   background on the row's cells rather than a pseudo-element: table rows
+   cannot reliably host positioned children. */
+.archive-row > * {
+  background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
+  background-size: 0% 100%;
+  background-repeat: no-repeat;
+  transition: background-size 650ms var(--ease-out);
+}
+.archive-row > :nth-child(2) {
+  transition-delay: 60ms;
+}
+.archive-row > :nth-child(3) {
+  transition-delay: 110ms;
+}
+.archive-row > :nth-child(4) {
+  transition-delay: 150ms;
+}
+@media (hover: hover) and (pointer: fine) {
+  .archive-row:hover > * {
+    background-size: 100% 100%;
+  }
+}
+
+/* --- Learning timeline (CertificateTimeline.jsx) ------------------------- */
+
+.learning-timeline {
+  --rail-x: 5.25rem;
+  --node: 0.875rem;
+  --lt-dur: 1400ms;
+}
+@media (min-width: 640px) {
+  .learning-timeline {
+    --rail-x: 6.5rem;
+  }
+}
+
+.lt-track {
+  position: absolute;
+  left: var(--rail-x);
+  top: 0.75rem;
+  bottom: 0;
+  width: 2px;
+  translate: -50% 0;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent);
+  mask-image: linear-gradient(to bottom, #000 85%, transparent);
+}
+
+.lt-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--accent), var(--accent) 70%, var(--brand-vermilion));
+  transform-origin: 50% 0;
+}
+
+.lt-node {
+  position: absolute;
+  z-index: 1;
+  left: var(--rail-x);
+  top: 0.75rem;
+  width: var(--node);
+  height: var(--node);
+  translate: -50% 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--bg);
+  box-shadow: 0 0 0 4px var(--bg);
+  transition:
+    transform 450ms var(--ease-spring),
+    background-color 300ms var(--ease-out);
+}
+
+.lt-node-now {
+  border-color: var(--brand-vermilion);
+  background: var(--brand-vermilion);
+}
+
+.lt-beacon {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--brand-vermilion);
+  animation: lt-beacon 2.4s var(--ease-out) infinite;
+}
+
+.lt-now {
+  display: none;
+}
+
+.lt-stem {
+  display: none;
+}
+
+.lt-entry {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  padding: 0.95rem 1rem 1rem 1.2rem;
+  transition:
+    transform 550ms var(--ease-out),
+    border-color 400ms var(--ease-out),
+    box-shadow 550ms var(--ease-out);
+}
+
+.lt-entry-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  transition: transform 500ms var(--ease-out);
+}
+
+.lt-entry-arrow {
+  transition: transform 500ms var(--ease-spring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lt-entry-arrow {
+    transform: scale(0) rotate(-45deg);
+  }
+  button.lt-entry:hover {
+    transform: translateY(-4px);
+    border-color: var(--line-accent);
+    box-shadow: 0 24px 44px -28px rgb(11 42 27 / 0.55);
+  }
+  .lt-entry:hover .lt-entry-bar {
+    transform: none;
+  }
+  .lt-entry:hover .lt-entry-arrow {
+    transform: none;
+  }
+  /* The year answers the entry under the pointer. */
+  .lt-year:has(.lt-entry:hover) .lt-node {
+    transform: scale(1.55);
+    background: var(--accent);
+  }
+  .lt-year:has(.lt-entry:hover) .lt-node-now {
+    background: var(--brand-vermilion);
+  }
+  .lt-year:has(.lt-entry:hover) .lt-year-num {
+    color: var(--accent-ink);
+  }
+}
+
+button.lt-entry:focus-visible {
+  border-color: var(--accent);
+}
+
+.lt-year-num {
+  transition: color 300ms var(--ease-out);
+}
+
+/* From lg the timeline lies on its side: the rail runs across under the
+   years, each node at the start of its column, a stem dropping from it to the
+   column's entries. */
+@media (min-width: 1024px) {
+  .learning-timeline {
+    --rail-y: 4rem;
+  }
+
+  .lt-label {
+    height: 3.25rem;
+  }
+
+  .lt-track {
+    left: 0;
+    right: 0;
+    top: var(--rail-y);
+    bottom: auto;
+    width: auto;
+    height: 2px;
+    translate: 0 calc(var(--node) / 2 - 1px);
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+
+  .lt-fill {
+    background: linear-gradient(to right, var(--accent), var(--accent) 75%, var(--brand-vermilion));
+    transform-origin: 0 50%;
+  }
+
+  .lt-node {
+    left: 0;
+    top: var(--rail-y);
+    translate: none;
+  }
+
+  .lt-now {
+    display: block;
+    position: absolute;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    translate: 0 -50%;
+    padding: 0.2rem 0.45rem;
+    background: var(--bg);
+    color: var(--vermilion-ink);
+    white-space: nowrap;
+  }
+
+  .lt-stem {
+    display: block;
+    position: absolute;
+    left: calc(var(--node) / 2 - 1px);
+    top: calc(var(--rail-y) + var(--node));
+    width: 2px;
+    height: calc(3.25rem + 3.5rem - var(--rail-y) - var(--node));
+    background: linear-gradient(to bottom, var(--accent), var(--line-accent));
+    transform-origin: 50% 0;
+  }
+}
+
+/* The sequence. Before the timeline is revealed every piece holds its start
+   state; once it is, each plays a keyframe with `backwards` fill — so the
+   start state covers its delay, and when it ends the piece hands back to its
+   normal styles and the hover transitions above work undelayed. */
+html[data-reveals="armed"] [data-reveal="timeline"] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+html[data-reveals="armed"] .learning-timeline:not([data-shown]) .lt-fill {
+  transform: scaleY(0);
+}
+html[data-reveals="armed"] .learning-timeline:not([data-shown]) :is(.lt-node, .lt-stem) {
+  transform: scale(0);
+}
+html[data-reveals="armed"] .learning-timeline:not([data-shown]) .lt-year-num {
+  transform: translate3d(0, 110%, 0);
+}
+html[data-reveals="armed"] .learning-timeline:not([data-shown]) .lt-entry-wrap {
+  opacity: 0;
+}
+
+html[data-reveals="armed"] .learning-timeline[data-shown] .lt-fill {
+  animation: lt-draw-y var(--lt-dur) var(--ease-in-out) 100ms backwards;
+}
+html[data-reveals="armed"] .learning-timeline[data-shown] .lt-node {
+  animation: lt-pop 700ms var(--ease-out) calc(100ms + var(--lt-dur) * var(--f, 0)) backwards;
+}
+html[data-reveals="armed"] .learning-timeline[data-shown] .lt-year-num {
+  animation: lt-rise 900ms var(--ease-out) calc(60ms + var(--lt-dur) * var(--f, 0)) backwards;
+}
+html[data-reveals="armed"] .learning-timeline[data-shown] .lt-stem {
+  animation: lt-draw-y 450ms var(--ease-out) calc(320ms + var(--lt-dur) * var(--f, 0)) backwards;
+}
+html[data-reveals="armed"] .learning-timeline[data-shown] .lt-entry-wrap {
+  animation: lt-drop 850ms var(--ease-out)
+    calc(480ms + var(--lt-dur) * var(--f, 0) + var(--j, 0) * 130ms) backwards;
+}
+
+@media (min-width: 1024px) {
+  html[data-reveals="armed"] .learning-timeline:not([data-shown]) .lt-fill {
+    transform: scaleX(0);
+  }
+  html[data-reveals="armed"] .learning-timeline[data-shown] .lt-fill {
+    animation-name: lt-draw-x;
+  }
+}
+
+@keyframes lt-draw-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes lt-draw-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes lt-pop {
+  0% {
+    transform: scale(0);
+  }
+  55% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes lt-rise {
+  from {
+    transform: translate3d(0, 110%, 0);
+  }
+}
+@keyframes lt-drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -18px, 0) rotate(-2deg);
+    filter: blur(5px);
+  }
+}
+@keyframes lt-beacon {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+/* --- Back and forward (lib/route-history.js, PageTransition.jsx) --------- */
+
+/* The browser's own buttons: a short, soft crossfade with a hint of direction.
+   Not a wipe, because a Back lands mid-page and a wipe clips from the far edge
+   of a full-page snapshot. */
+::view-transition-old(.nav-pop) {
+  animation: 240ms var(--ease-in-out) both pop-out;
+}
+::view-transition-new(.nav-pop) {
+  animation: 420ms var(--ease-out) both pop-in-forward;
+}
+html[data-nav-dir="back"]::view-transition-new(.nav-pop) {
+  animation-name: pop-in-back;
+}
+html[data-nav-dir="none"]::view-transition-old(.nav-pop),
+html[data-nav-dir="none"]::view-transition-new(.nav-pop) {
+  animation: none;
+}
+html[data-nav-dir="none"]::view-transition-old(.nav-pop) {
+  display: none;
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes pop-in-forward {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes pop-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* A page coming back is not arriving: what is already on screen is just there.
+   Set for two frames while settleRevealsInstantly marks it all shown. */
+html[data-restoring] :is([data-reveal], .sw-i) {
+  transition: none !important;
+}
+html[data-reveals="armed"] .learning-timeline[data-instant]
+  :is(.lt-fill, .lt-node, .lt-year-num, .lt-stem, .lt-entry-wrap) {
+  animation: none;
+}
