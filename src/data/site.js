@@ -88,7 +88,7 @@ export const site = {
   // --- SEO ------------------------------------------------------------------
   seo: {
     /** No trailing slash. Required for canonical URLs, sitemap and OG images. */
-    url: "[YOUR SITE URL]", // e.g. "https://sarangprajapati.dev"
+    url: "https://sarang-portfolio-liard.vercel.app",
     title: "Sarang Shivay Prajapati — Frontend Developer",
     titleTemplate: "%s — Sarang Shivay Prajapati",
     description:
