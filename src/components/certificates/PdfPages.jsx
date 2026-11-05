@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import "react-pdf/dist/Page/TextLayer.css";
-import { Document, Page } from "@/components/certificates/pdf";
+import { Document, Page, pdfOptions } from "@/components/certificates/pdf";
 
 /* Largest canvas worth drawing, in pixels. iOS Safari refuses canvases above
    ~16.7 million pixels outright, and a sharper page than this is detail no
@@ -24,6 +24,10 @@ const STEP = 512;
  * The text layer stays on: it is what a screen reader reads, and it lets a
  * recruiter select and copy a credential ID straight off the document. It
  * scales with the canvas because both sit inside the same transform.
+ *
+ * `seeThrough` is for when an image of the document sits behind these pages: the
+ * sheets drop their own paper, so that image shows whenever a canvas is hidden
+ * for drawing, instead of a blank page.
  */
 export default function PdfPages({
   src,
@@ -33,6 +37,7 @@ export default function PdfPages({
   gap,
   ratio,
   label,
+  seeThrough = false,
   onInfo,
   onReady,
   onFailed,
@@ -50,6 +55,7 @@ export default function PdfPages({
   return (
     <Document
       file={src}
+      options={pdfOptions}
       loading={null}
       error={null}
       noData={null}
@@ -75,7 +81,7 @@ export default function PdfPages({
             key={index}
             aria-label={pages > 1 ? `${label}, page ${index + 1} of ${pages}` : undefined}
             role={pages > 1 ? "group" : undefined}
-            className="cert-paper relative shrink-0 overflow-hidden"
+            className={`${seeThrough ? "" : "cert-paper "}relative shrink-0 overflow-hidden`}
             style={{ width, height }}
           >
             <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Component, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 
@@ -8,7 +8,9 @@ import { cn } from "@/lib/cn";
 import { Icon } from "@/components/ui/Icon";
 import { FALLBACK_RATIO } from "@/components/certificates/CertificatePreview";
 
-const PdfPages = dynamic(() => import("@/components/certificates/PdfPages"), {
+const loadPdfPages = () => import("@/components/certificates/PdfPages");
+
+const PdfPages = dynamic(loadPdfPages, {
   ssr: false,
   loading: () => null,
 });
@@ -18,6 +20,27 @@ export const MAX_ZOOM = 5;
 export const clampZoom = (value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 
 const PAGE_GAP = 24;
+
+/* How long the entrance gets to itself before pdf.js starts. Drawing a page
+   holds the main thread, which would stutter the animation, and stepping quickly
+   through the collection should not parse every document passed on the way. */
+const PDF_START_DELAY_MS = 300;
+
+/* A document with nothing else to show gives up after this long and offers the
+   file directly, so the loading state can never be the last thing a visitor sees. */
+const LOAD_TIMEOUT_MS = 25_000;
+
+/**
+ * Called when a pointer or focus reaches a card, so the first frame of the
+ * viewer is already in the browser's cache by the time it opens.
+ */
+export function preloadCertificate(certificate) {
+  if (certificate.document?.kind !== "pdf") return;
+  loadPdfPages().catch(() => {});
+  if (certificate.preview?.kind === "image") {
+    new window.Image().src = certificate.preview.src;
+  }
+}
 
 /**
  * The certificate, on a stage that behaves like a desk under a loupe.
@@ -37,15 +60,31 @@ const PAGE_GAP = 24;
  * The full-resolution file is requested here and only here: the card showed a
  * small rendition, and this is the first time the original is worth its
  * weight.
+ *
+ * A PDF with a WebP beside it opens on the WebP and is swapped for the real
+ * document once its first page has been drawn. A scanned certificate can take
+ * several seconds to decode, and the visitor came to read it, not to watch that
+ * happen. If the PDF never arrives the WebP simply stays, and "Open PDF" in the
+ * toolbar still reaches the original.
+ *
+ * The WebP stays underneath afterwards. Zooming past the detail a canvas holds
+ * makes react-pdf hide it while it draws a sharper one, and on those same scans
+ * that would otherwise be seconds of blank paper.
  */
 export function ViewerStage({ certificate, zoom, onZoom }) {
   const doc = certificate.document;
   const known = doc.width && doc.height ? doc.width / doc.height : null;
+  const poster =
+    doc.kind === "pdf" && certificate.preview?.kind === "image"
+      ? certificate.preview
+      : null;
 
   const [ratio, setRatio] = useState(known ?? FALLBACK_RATIO);
   const [pages, setPages] = useState(1);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
+  const [pdfStarted, setPdfStarted] = useState(!poster);
   const [box, setBox] = useState(null);
   const [dragging, setDragging] = useState(false);
 
@@ -60,6 +99,26 @@ export function ViewerStage({ certificate, zoom, onZoom }) {
     zoomRef.current = zoom;
     onZoomRef.current = onZoom;
   });
+
+  const showPoster = Boolean(poster) && !posterFailed;
+
+  useEffect(() => {
+    if (pdfStarted) return;
+    const timer = setTimeout(() => setPdfStarted(true), PDF_START_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pdfStarted]);
+
+  useEffect(() => {
+    if (ready || failed || showPoster) return;
+    const timer = setTimeout(() => setFailed(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [ready, failed, showPoster]);
+
+  /* With the WebP on screen a PDF failure costs only sharpness, so it is not
+     worth interrupting the visitor for. */
+  const onPdfFailed = () => {
+    if (!showPoster) setFailed(true);
+  };
 
   /* ---- Geometry ------------------------------------------------------- */
 
@@ -217,8 +276,33 @@ export function ViewerStage({ certificate, zoom, onZoom }) {
           className="grid place-items-center"
           style={{ width: contentWidth, height: contentHeight, padding: pad }}
         >
-          <div className="relative">
-            {!ready && (
+          {/* Sized up front: the only other content is absolutely positioned
+              until the PDF renderer has loaded, and a box with no size would
+              centre its top-left corner on the stage instead of the document. */}
+          <div className="relative" style={{ width: docWidth, minHeight: docHeight }}>
+            {showPoster && (
+              <Image
+                src={poster.src}
+                /* Once the PDF is up its text layer is what gets read out. */
+                alt={ready ? "" : certificate.alt}
+                width={poster.width ?? 1600}
+                height={poster.height ?? 1131}
+                /* Already compressed for this job, and the same file a preload
+                   put in the cache. */
+                unoptimized
+                loading="eager"
+                fetchPriority="high"
+                /* Painted in the same frame as the layout that sized it, so the
+                   white sheet behind it does not flash on opening or zooming. */
+                decoding="sync"
+                draggable={false}
+                onError={() => setPosterFailed(true)}
+                className="cert-paper absolute left-0 top-0 block max-w-none"
+                style={{ width: docWidth, height: docHeight }}
+              />
+            )}
+
+            {!ready && !showPoster && (
               <div
                 className="cert-paper absolute left-0 top-0 grid place-items-center overflow-hidden"
                 style={{ width: docWidth, height: docHeight }}
@@ -261,21 +345,30 @@ export function ViewerStage({ certificate, zoom, onZoom }) {
                 style={{ width: docWidth, height: docHeight }}
               />
             ) : (
-              <PdfPages
-                src={doc.src}
-                width={docWidth}
-                height={docHeight}
-                pages={pages}
-                gap={PAGE_GAP}
-                ratio={ratio}
-                label={certificate.alt}
-                onInfo={(info) => {
-                  setPages(info.pages);
-                  setRatio(info.ratio);
-                }}
-                onReady={() => setReady(true)}
-                onFailed={() => setFailed(true)}
-              />
+              pdfStarted && (
+                /* `relative` so it paints over the absolutely positioned WebP,
+                   which would otherwise sit on top of it. */
+                <div className="relative">
+                  <PdfBoundary onFailed={onPdfFailed}>
+                    <PdfPages
+                      src={doc.src}
+                      width={docWidth}
+                      height={docHeight}
+                      pages={pages}
+                      gap={PAGE_GAP}
+                      ratio={ratio}
+                      label={certificate.alt}
+                      seeThrough={showPoster}
+                      onInfo={(info) => {
+                        setPages(info.pages);
+                        setRatio(info.ratio);
+                      }}
+                      onReady={() => setReady(true)}
+                      onFailed={onPdfFailed}
+                    />
+                  </PdfBoundary>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -284,6 +377,28 @@ export function ViewerStage({ certificate, zoom, onZoom }) {
       {failed && <LoadFailure document={doc} />}
     </div>
   );
+}
+
+/**
+ * Catches the renderer's chunk failing to load: a tab left open across a
+ * deployment, a dropped connection, or a browser too old for pdf.js. Without
+ * this, the rejected import would take the whole page down rather than one
+ * document.
+ */
+class PdfBoundary extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onFailed();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /* Records which point of the document sits under the pointer, as a fraction

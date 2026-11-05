@@ -1,23 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-
 import "react-pdf/dist/Page/TextLayer.css";
+import { Document, Page, pdfOptions } from "@/components/certificates/pdf";
 import { Icon } from "@/components/ui/Icon";
-
-/**
- * pdf.js runs its parser in a web worker so a 300KB document never blocks the
- * main thread. `new URL(..., import.meta.url)` hands the worker file to the
- * bundler as an asset reference, which means the worker version can never drift
- * out of sync with the `pdfjs-dist` version in node_modules — the failure mode
- * you get from copying the worker into /public by hand and forgetting to
- * refresh it after an upgrade.
- */
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
 
 /* Horizontal breathing room inside the scroll area, in px. */
 const GUTTER = 48;
@@ -139,6 +125,7 @@ export function ResumeDocument({
         ) : (
           <Document
             file={file}
+            options={pdfOptions}
             onLoadSuccess={handleLoadSuccess}
             onLoadError={handleLoadError}
             onSourceError={handleLoadError}

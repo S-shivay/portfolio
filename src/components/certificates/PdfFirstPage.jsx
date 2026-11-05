@@ -1,6 +1,6 @@
 "use client";
 
-import { Document, Page } from "@/components/certificates/pdf";
+import { Document, Page, pdfOptions } from "@/components/certificates/pdf";
 
 /**
  * The first page of a PDF, drawn once as a thumbnail.
@@ -17,6 +17,7 @@ export default function PdfFirstPage({ src, onSize, onRendered, onFailed }) {
   return (
     <Document
       file={src}
+      options={pdfOptions}
       loading={null}
       error={null}
       noData={null}

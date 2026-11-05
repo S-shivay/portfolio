@@ -40,6 +40,8 @@ const MAX_ENTRIES = 150;
    resumes regardless. */
 const SMOOTH_RESTORE_MS = 1400;
 const SETTLE_MS = 1500;
+/* Longest the pending bar stays up if a navigation never commits. */
+const PENDING_LIMIT_MS = 20_000;
 
 let prepared = false;
 let positions = {};
@@ -57,6 +59,7 @@ let saveTimer = 0;
 const overlays = [];
 let releaseTimer = null;
 let navigatingUntil = 0;
+let pendingTimer = 0;
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
@@ -224,12 +227,29 @@ function resolveY({ y, hash }) {
 }
 
 /**
+ * Shows the pending bar from the moment a route change is asked for. The router
+ * gives no signal of its own until the new page commits, and a page that is not
+ * prefetched yet can be seconds away, during which the click looks ignored.
+ */
+export function markRoutePending() {
+  document.documentElement.dataset.navigating = "";
+  clearTimeout(pendingTimer);
+  pendingTimer = setTimeout(clearRoutePending, PENDING_LIMIT_MS);
+}
+
+function clearRoutePending() {
+  clearTimeout(pendingTimer);
+  delete document.documentElement.dataset.navigating;
+}
+
+/**
  * Called from a layout effect whenever the rendered route changes, in the same
  * commit as the swap. This is the moment a cross-route Back lands.
  */
 export function commitRoute(pathname) {
   if (pathname === renderedPath) return;
   renderedPath = pathname;
+  clearRoutePending();
 
   if (!pending || location.pathname !== pathname) return;
 
@@ -355,7 +375,10 @@ function onClick(event) {
     /* In the capture phase on window: the preventDefault here is what next/link
        checks before navigating, and the link's own onClick still runs. */
     if (goToHash(url.hash, { focus: event.detail === 0 })) event.preventDefault();
+    return;
   }
+
+  if (url.pathname !== location.pathname) markRoutePending();
 }
 
 /* ---- Traversal ----------------------------------------------------------- */

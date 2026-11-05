@@ -12,7 +12,7 @@ import { Icon } from "@/components/ui/Icon";
 import { openResumeViewer } from "@/components/resume/ResumeViewer";
 import { openCompose } from "@/components/contact/ComposeDialog";
 import { useBackToClose } from "@/hooks/useBackToClose";
-import { goToHash, markNavigating } from "@/lib/route-history";
+import { goToHash, markNavigating, markRoutePending } from "@/lib/route-history";
 
 const OPEN_EVENT = "command-palette:open";
 
@@ -69,6 +69,7 @@ export function CommandPalette() {
           if (window.location.pathname === "/") {
             goToHash(`#${item.id}`);
           } else {
+            markRoutePending();
             router.push(`/#${item.id}`, { transitionTypes: ["nav-back"] });
           }
         },
@@ -91,6 +92,7 @@ export function CommandPalette() {
           }
           markNavigating();
           close();
+          markRoutePending();
           router.push(href, { transitionTypes: ["nav-forward"] });
         },
       });

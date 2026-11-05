@@ -2184,7 +2184,7 @@ html.lenis {
    cover is a shared element and morphs between its two positions instead.
    ========================================================================== */
 
-/* Clicks during the ~600ms overlay land on the live page, not on a snapshot. */
+/* Clicks during the overlay land on the live page, not on a snapshot. */
 ::view-transition {
   pointer-events: none;
 }
@@ -2212,16 +2212,16 @@ html.lenis {
 }
 
 ::view-transition-old(.nav-forward) {
-  animation: 520ms var(--ease-in-out) both page-sink;
+  animation: 260ms var(--ease-in-out) both page-sink;
 }
 ::view-transition-new(.nav-forward) {
-  animation: 760ms var(--ease-out) both page-wipe-up;
+  animation: 400ms var(--ease-out) both page-wipe-up;
 }
 ::view-transition-old(.nav-back) {
-  animation: 520ms var(--ease-in-out) both page-drop;
+  animation: 260ms var(--ease-in-out) both page-drop;
 }
 ::view-transition-new(.nav-back) {
-  animation: 760ms var(--ease-out) both page-wipe-down;
+  animation: 400ms var(--ease-out) both page-wipe-down;
 }
 
 @keyframes page-sink {
@@ -2260,7 +2260,7 @@ html.lenis {
 /* The cover travelling from the project list into the case-study header. */
 ::view-transition-group(.morph) {
   z-index: 60;
-  animation-duration: 760ms;
+  animation-duration: 400ms;
   animation-timing-function: var(--ease-out);
 }
 ::view-transition-image-pair(.morph) {
@@ -2934,6 +2934,30 @@ html[data-intro="on"] .intro-curtain {
   .page-progress {
     animation: cs-progress linear both;
     animation-timeline: scroll(root);
+  }
+}
+
+/* A link has been followed and the next page is not here yet. Set from the click
+   and cleared when the route commits (lib/route-history). The delay keeps it from
+   flashing on the usual navigation, which lands before it would show. */
+html[data-navigating] body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 71;
+  height: 3px;
+  background: var(--brand-vermilion);
+  transform-origin: 0 50%;
+  pointer-events: none;
+  animation: route-pending 6s cubic-bezier(0.08, 0.8, 0.2, 1) 150ms both;
+}
+
+@keyframes route-pending {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.92);
   }
 }
 

@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 import { Icon } from "@/components/ui/Icon";
 import { IssuerMark } from "@/components/certificates/IssuerMark";
 import { CertificatePreview } from "@/components/certificates/CertificatePreview";
+import { preloadCertificate } from "@/components/certificates/ViewerStage";
 
 /* The width each preview is drawn at, for next/image's `sizes`. The stage
    insets the sheet by 9% on each side. A regular card is a 7.5rem thumbnail
@@ -232,6 +233,8 @@ export function CertificateCard({ certificate, featured = false, onOpen }) {
                   <button
                     type="button"
                     onClick={() => onOpen(c.id)}
+                    onPointerEnter={() => preloadCertificate(c)}
+                    onFocus={() => preloadCertificate(c)}
                     data-cursor="view"
                     data-cursor-label="View"
                     className={cn(
