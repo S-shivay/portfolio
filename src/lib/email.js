@@ -46,6 +46,14 @@ const FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax";
  */
 const DEFAULT_FROM = "Portfolio <onboarding@resend.dev>";
 
+/**
+ * The longest a visitor waits on a mail provider, covering the connection, the
+ * response and reading its body. `fetch` has no timeout of its own, so without
+ * this an unreachable provider holds the form on "Sending" for as long as the
+ * connection takes to give up: over 20 seconds when FormSubmit returns a 522.
+ */
+const DELIVERY_TIMEOUT_MS = 3000;
+
 const isPlaceholder = (value) =>
   !value || typeof value !== "string" || value.startsWith("[");
 
@@ -96,24 +104,38 @@ export async function sendContactEmail({ name, email, message }) {
   const replyTo = singleLine(email);
   const subject = `Portfolio enquiry from ${from}`;
   const submittedAt = new Date().toISOString();
+  const signal = AbortSignal.timeout(DELIVERY_TIMEOUT_MS);
 
-  switch (transport) {
-    case "resend":
-      return sendViaResend({ to, from, replyTo, subject, message, submittedAt });
-    case "web3forms":
-      return sendViaWeb3Forms({ from, replyTo, subject, message });
-    case "webhook":
-      return sendViaWebhook({ name: from, email: replyTo, message, submittedAt });
-    default:
-      return sendViaFormSubmit({ to, from, replyTo, subject, message });
+  try {
+    switch (transport) {
+      case "resend":
+        return await sendViaResend({ to, from, replyTo, subject, message, submittedAt, signal });
+      case "web3forms":
+        return await sendViaWeb3Forms({ from, replyTo, subject, message, signal });
+      case "webhook":
+        return await sendViaWebhook({ name: from, email: replyTo, message, submittedAt, signal });
+      default:
+        return await sendViaFormSubmit({ to, from, replyTo, subject, message, signal });
+    }
+  } catch (error) {
+    /* Checked on the signal rather than the error's name: a transport that was
+       reading the response body when time ran out reports a parse failure
+       instead, and the log should still say what actually happened. */
+    if (signal.aborted) {
+      throw new Error(`${transport} did not respond within ${DELIVERY_TIMEOUT_MS}ms`, {
+        cause: error,
+      });
+    }
+    throw error;
   }
 }
 
 /* -------------------------------------------------------------------------- */
 
-async function sendViaResend({ to, from, replyTo, subject, message, submittedAt }) {
+async function sendViaResend({ to, from, replyTo, subject, message, submittedAt, signal }) {
   const response = await fetch(RESEND_ENDPOINT, {
     method: "POST",
+    signal,
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
@@ -136,9 +158,10 @@ async function sendViaResend({ to, from, replyTo, subject, message, submittedAt 
   }
 }
 
-async function sendViaWeb3Forms({ from, replyTo, subject, message }) {
+async function sendViaWeb3Forms({ from, replyTo, subject, message, signal }) {
   const response = await fetch(WEB3FORMS_ENDPOINT, {
     method: "POST",
+    signal,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
       access_key: process.env.WEB3FORMS_ACCESS_KEY,
@@ -160,9 +183,10 @@ async function sendViaWeb3Forms({ from, replyTo, subject, message }) {
   }
 }
 
-async function sendViaWebhook({ name, email, message, submittedAt }) {
+async function sendViaWebhook({ name, email, message, submittedAt, signal }) {
   const response = await fetch(process.env.CONTACT_WEBHOOK_URL, {
     method: "POST",
+    signal,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, message, submittedAt }),
   });
@@ -172,9 +196,10 @@ async function sendViaWebhook({ name, email, message, submittedAt }) {
   }
 }
 
-async function sendViaFormSubmit({ to, from, replyTo, subject, message }) {
+async function sendViaFormSubmit({ to, from, replyTo, subject, message, signal }) {
   const response = await fetch(`${FORMSUBMIT_ENDPOINT}/${encodeURIComponent(to)}`, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",

@@ -118,7 +118,13 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="flex min-h-full flex-col bg-bg text-text">
+      {/* Browser extensions write attributes onto <body> before React hydrates
+          (Grammarly's data-gr-ext-installed, for one). This covers this element
+          alone: mismatches in anything inside it are still reported. */}
+      <body
+        suppressHydrationWarning
+        className="flex min-h-full flex-col bg-bg text-text"
+      >
         <MotionProvider>
           {/* The whole scroll-reveal system: one observer for the document. */}
           <RevealRuntime />

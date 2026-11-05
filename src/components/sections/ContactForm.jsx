@@ -36,7 +36,16 @@ export function ContactForm({ email }) {
   const emailId = useId();
   const messageId = useId();
 
-  const errors = { ...clientErrors, ...state.errors };
+  /* Client results win. They are newer than the last submission, and both sides
+     run the same validator, so a server error stops showing once its field has
+     been corrected. A field the visitor has not revisited has no client result,
+     so its server error stays. */
+  const errors = { ...state.errors, ...clientErrors };
+
+  /* "Please fix the highlighted fields" is untrue once none are highlighted. */
+  const allCorrected =
+    Object.keys(state.errors ?? {}).length > 0 &&
+    !Object.values(errors).some(Boolean);
 
   /* Move focus to the first field the server rejected. Without this a
      keyboard or screen-reader user has to hunt for what went wrong. */
@@ -74,8 +83,10 @@ export function ContactForm({ email }) {
 
   const handleChange = (field) => (event) => {
     // Only re-validate on change once the field has been visited, so the user
-    // is not told they are wrong while still typing their first character.
-    if (!touched[field]) return;
+    // is not told they are wrong while still typing their first character. A
+    // field the server rejected is already showing an error, so it re-validates
+    // straight away and the error clears as soon as the value is valid.
+    if (!touched[field] && !state.errors?.[field]) return;
     setClientErrors((current) => ({
       ...current,
       [field]: validateField(field, event.target.value),
@@ -148,7 +159,7 @@ export function ContactForm({ email }) {
       {/* Status. `role="status"` announces changes without stealing focus. */}
       <div role="status" aria-live="polite" className="min-h-6">
         <AnimatePresence mode="wait" initial={false}>
-          {state.status !== "idle" && state.message && (
+          {state.status !== "idle" && state.message && !allCorrected && (
             <StatusMessage
               key={state.status + state.message}
               status={state.status}

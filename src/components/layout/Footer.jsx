@@ -104,9 +104,25 @@ export function Footer() {
 
         {/* Baseline */}
         <div className="mt-12 flex flex-col gap-5 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="label-mono text-faint">
-            © {year} {site.name}
-          </p>
+          <div className="flex flex-col gap-3">
+            <p className="label-mono text-faint">
+              © {year} {site.name}
+            </p>
+            {/* Required by the Skiper UI free licence. */}
+            <p className="text-[0.8125rem] text-faint">
+              Interface components adapted from{" "}
+              <a
+                href="https://skiper-ui.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-cursor="link"
+                className="tap-target underline decoration-1 underline-offset-4 transition-colors duration-200 hover:text-text"
+              >
+                Skiper UI
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </p>
+          </div>
 
           <div className="flex items-center gap-2">
             {social.map(({ key, href, label, Glyph }) => (
